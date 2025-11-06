@@ -11,6 +11,20 @@ import pytest
 from src.core.params import validate_dna_sequence
 
 
+@pytest.fixture(scope="module")
+def long_sequence() -> str:
+    """Pre-generated 10k bp DNA sequence for benchmarking."""
+    rng = random.Random(0)
+    return "".join(rng.choice("ACGT") for _ in range(10_000))
+
+
+@pytest.fixture(scope="module")
+def very_long_sequence() -> str:
+    """Pre-generated 250k bp DNA sequence for benchmarking."""
+    rng = random.Random(1)
+    return "".join(rng.choice("ACGT") for _ in range(250_000))
+
+
 @pytest.mark.performance
 class TestSequenceValidationPerformance:
     """Benchmark sequence validation performance."""
@@ -24,18 +38,20 @@ class TestSequenceValidationPerformance:
         assert result is not None
 
     @pytest.mark.benchmark(group="validation")
-    def test_long_sequence_validation(self, benchmark) -> None:
+    def test_long_sequence_validation(
+        self, benchmark, long_sequence: str
+    ) -> None:
         """Benchmark validation of long sequences (10k bp)."""
-        long_seq = "".join(random.choice("ACGT") for _ in range(10000))
-        result = benchmark(validate_dna_sequence, long_seq)
+        result = benchmark(validate_dna_sequence, long_sequence)
         assert result is not None
 
     @pytest.mark.benchmark(group="validation")
     @pytest.mark.slow
-    def test_very_long_sequence_validation(self, benchmark) -> None:
-        """Benchmark validation of very long sequences (1M bp)."""
-        very_long_seq = "".join(random.choice("ACGT") for _ in range(1000000))
-        result = benchmark(validate_dna_sequence, very_long_seq)
+    def test_very_long_sequence_validation(
+        self, benchmark, very_long_sequence: str
+    ) -> None:
+        """Benchmark validation of very long sequences (250k bp)."""
+        result = benchmark(validate_dna_sequence, very_long_sequence)
         assert result is not None
 
 

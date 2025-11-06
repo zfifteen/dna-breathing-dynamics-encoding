@@ -81,15 +81,15 @@ def bootstrap_confidence_interval(
     Returns:
         Tuple of (lower_bound, upper_bound) for confidence interval
     """
-    if random_seed is not None:
-        np.random.seed(random_seed)
+    rng = np.random.default_rng(random_seed)
 
+    data = np.asarray(data)
     n = len(data)
     bootstrap_statistics = np.zeros(n_resamples)
 
     for i in range(n_resamples):
         # Resample with replacement
-        resample = np.random.choice(data, size=n, replace=True)
+        resample = rng.choice(data, size=n, replace=True)
         bootstrap_statistics[i] = statistic_func(resample)
 
     # Calculate percentiles
