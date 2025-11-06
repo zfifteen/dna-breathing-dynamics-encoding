@@ -25,6 +25,7 @@ def very_long_sequence() -> str:
     return "".join(rng.choice("ACGT") for _ in range(250_000))
 
 
+
 @pytest.mark.performance
 class TestSequenceValidationPerformance:
     """Benchmark sequence validation performance."""

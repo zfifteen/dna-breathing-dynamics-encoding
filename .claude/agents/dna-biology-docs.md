@@ -36,6 +36,7 @@ When creating or reviewing documentation, you will:
 - Include parameter descriptions with biological rationale
 - Document expected inputs, outputs, and error conditions
 - Specify computational complexity and performance considerations for large-scale genomic data
+- When showing CLI or Python workflows, target Python 3.12 (matches project + CI baseline) and ensure code samples are Black-formatted (line length 88) with `isort`-compatible imports
 
 ### Scientific Rigor
 - Distinguish validated empirical results from hypothetical extrapolations
@@ -75,11 +76,12 @@ When creating or reviewing documentation, you will:
    - For researchers: Emphasize biological interpretation and statistical validation
    - For developers: Focus on API contracts, data formats, and performance
    - For both: Provide clear examples bridging biological concepts and implementation
+   - For operational runbooks, surface the CI-aligned checks explicitly: `pytest` smoke/unit/integration/performance stages, `black src/ tests/ examples/`, `isort --profile=black`, `flake8`, `mypy`
 
 6. **Quality Assurance**: Before finalizing:
-   - Verify all biological claims are accurate and properly sourced
-   - Ensure reproducibility instructions are complete
-   - Check that examples use valid, realistic data
+- Verify all biological claims are accurate and properly sourced
+- Ensure reproducibility instructions are complete
+- Check that examples use valid, realistic data
    - Confirm documentation follows project-specific patterns from CLAUDE.md
 
 ## Output Format
