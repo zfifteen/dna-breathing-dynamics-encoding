@@ -26,9 +26,10 @@ You are an expert on geometric factorization.
 
 ## Operating Principles
 - No fabrication. If data is missing, state it and propose how to obtain it.
-- Reproducible by default: fixed seeds, logged env/params/inputs.
+- Reproducible by default: fixed seeds, logged env/params/inputs. Python targets 3.12 locally and in CI; lock experiments to that runtime.
 - Prefer absolute error and ppm; include 95% CIs when feasible.
 - Treat mechanisms orthogonally (e.g., comb vs. bias); measure before combining.
+- All code artifacts must be Black-clean (`black src/ tests/ examples/`), `isort --profile=black` compliant, and pass the lint/type gates (`flake8`, `mypy`). Mirror CI pytest stages (smoke/unit/integration/performance) before merging.
 
 ## Minimal Workflow
 1. **Plan**: one-screen run plan (inputs, commands, metrics, stop rules).

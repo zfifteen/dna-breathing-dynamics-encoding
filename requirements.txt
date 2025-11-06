@@ -1,0 +1,26 @@
+# Core scientific computing dependencies (exact version pinning)
+numpy==1.26.4
+scipy==1.11.4
+mpmath==1.3.0
+pandas==2.1.4
+
+# Bioinformatics
+biopython==1.83
+
+# Development tools
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-benchmark==4.0.0
+black==23.12.1
+flake8==6.1.0
+mypy==1.7.1
+isort==5.13.2
+
+# Visualization (optional)
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Build tools
+Cython==3.0.8
+setuptools==69.0.3
+wheel==0.42.0
