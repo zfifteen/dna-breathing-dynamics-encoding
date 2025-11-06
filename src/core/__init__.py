@@ -6,16 +6,12 @@ and common functionality used across the framework.
 """
 
 from src.core.params import (
-    # Precision settings
-    DEFAULT_MPMATH_DPS,
-    DEFAULT_MPFR_PRECISION,
-    # DNA-specific parameters
     BREATHING_FREQUENCY_DEFAULT,
-    TEMPERATURE_DEFAULT,
-    # Mathematical framework parameters
+    DEFAULT_MPFR_PRECISION,
+    DEFAULT_MPMATH_DPS,
     KAPPA_GEO_DEFAULT,
     KAPPA_STAR_DEFAULT,
-    # Validation functions
+    TEMPERATURE_DEFAULT,
     validate_dna_sequence,
     validate_kappa_geo,
     validate_temperature,

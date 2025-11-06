@@ -59,14 +59,16 @@ def example_parameter_usage() -> None:
     print("=" * 60)
 
     # Default parameters
-    print(f"\nDefault temperature: {TEMPERATURE_DEFAULT}K ({TEMPERATURE_DEFAULT - 273.15}°C)")
+    temp_celsius = TEMPERATURE_DEFAULT - 273.15
+    print(f"\nDefault temperature: {TEMPERATURE_DEFAULT}K ({temp_celsius}°C)")
     print(f"Default kappa_geo: {KAPPA_GEO_DEFAULT}")
     print(f"Default mpmath precision: {DEFAULT_MPMATH_DPS} decimal places")
 
     # Validate custom temperature
     custom_temp = 298.15  # Room temperature
     validated_temp = validate_temperature(custom_temp)
-    print(f"\nValidated temperature: {validated_temp}K ({validated_temp - 273.15}°C)")
+    validated_celsius = validated_temp - 273.15
+    print(f"\nValidated temperature: {validated_temp}K ({validated_celsius}°C)")
 
 
 def example_high_precision() -> None:
@@ -80,7 +82,7 @@ def example_high_precision() -> None:
     print(f"\nPrecision: {mp.dps} decimal places")
 
     # High-precision calculation
-    from mpmath import exp, mpf, pi, sqrt
+    from mpmath import exp, pi, sqrt
 
     # Calculate e^π
     result = exp(pi)
@@ -113,7 +115,10 @@ def example_statistical_analysis() -> None:
     from scipy import stats
 
     ci = stats.t.interval(
-        0.95, len(gc_content_data) - 1, loc=np.mean(gc_content_data), scale=stats.sem(gc_content_data)
+        0.95,
+        len(gc_content_data) - 1,
+        loc=np.mean(gc_content_data),
+        scale=stats.sem(gc_content_data),
     )
     print(f"95% CI: [{ci[0]:.4f}, {ci[1]:.4f}]")
 

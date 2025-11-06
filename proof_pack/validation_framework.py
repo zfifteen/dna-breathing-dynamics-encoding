@@ -38,7 +38,11 @@ class ValidationResult:
 
     def summary(self) -> str:
         """Generate human-readable summary."""
-        lines = [f"\n{'='*60}", f"Test: {self.test_name}", f"Status: {'PASS' if self.passed else 'FAIL'}"]
+        lines = [
+            f"\n{'='*60}",
+            f"Test: {self.test_name}",
+            f"Status: {'PASS' if self.passed else 'FAIL'}",
+        ]
 
         if self.p_value is not None:
             lines.append(f"p-value: {self.p_value:.6f}")
@@ -53,7 +57,7 @@ class ValidationResult:
         if self.effect_size is not None:
             lines.append(f"Effect size: {self.effect_size:.6f}")
 
-        lines.append("="*60)
+        lines.append("=" * 60)
         return "\n".join(lines)
 
 
@@ -122,7 +126,9 @@ def validate_statistical_hypothesis(
     if test_type == "t-test":
         if expected_data is None:
             # One-sample t-test against zero
-            statistic, p_value = stats.ttest_1samp(observed_data, 0, alternative=alternative)
+            statistic, p_value = stats.ttest_1samp(
+                observed_data, 0, alternative=alternative
+            )
         else:
             # Two-sample t-test
             statistic, p_value = stats.ttest_ind(
@@ -155,7 +161,8 @@ def validate_statistical_hypothesis(
     effect_size = None
     if test_type == "t-test" and expected_data is not None:
         pooled_std = np.sqrt(
-            (np.std(observed_data, ddof=1) ** 2 + np.std(expected_data, ddof=1) ** 2) / 2
+            (np.std(observed_data, ddof=1) ** 2 + np.std(expected_data, ddof=1) ** 2)
+            / 2
         )
         if pooled_std > 0:
             effect_size = (np.mean(observed_data) - np.mean(expected_data)) / pooled_std
@@ -275,14 +282,14 @@ class ValidationSuite:
             f"Passed: {passed}",
             f"Failed: {failed}",
             f"Success rate: {100*passed/total:.1f}%",
-            "="*60,
+            "=" * 60,
         ]
 
         for result in self.results:
             status = "✓" if result.passed else "✗"
             lines.append(f"{status} {result.test_name}")
 
-        lines.append("="*60)
+        lines.append("=" * 60)
         return "\n".join(lines)
 
     def detailed_report(self) -> str:

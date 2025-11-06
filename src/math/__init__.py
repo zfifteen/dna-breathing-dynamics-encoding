@@ -5,4 +5,6 @@ This module provides high-precision numerical computation, statistical
 analysis, and mathematical framework implementations for DNA dynamics.
 """
 
-__all__ = []
+from typing import List
+
+__all__: List[str] = []

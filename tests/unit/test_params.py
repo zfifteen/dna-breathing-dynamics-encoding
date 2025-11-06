@@ -7,11 +7,11 @@ Tests parameter validation functions, bounds checking, and error handling.
 import pytest
 
 from src.core.params import (
+    DNA_NUCLEOTIDES,
     KAPPA_GEO_DEFAULT,
     KAPPA_STAR_DEFAULT,
-    TEMPERATURE_DEFAULT,
-    DNA_NUCLEOTIDES,
     RNA_NUCLEOTIDES,
+    TEMPERATURE_DEFAULT,
     validate_dna_sequence,
     validate_kappa_geo,
     validate_kappa_star,

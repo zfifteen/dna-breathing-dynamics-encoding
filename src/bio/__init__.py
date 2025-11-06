@@ -5,4 +5,6 @@ This module provides DNA/RNA sequence processing, structural analysis,
 and breathing dynamics characterization.
 """
 
-__all__ = []
+from typing import List
+
+__all__: List[str] = []

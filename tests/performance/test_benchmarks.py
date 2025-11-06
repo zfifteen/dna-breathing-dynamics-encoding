@@ -16,7 +16,9 @@ class TestSequenceValidationPerformance:
     """Benchmark sequence validation performance."""
 
     @pytest.mark.benchmark(group="validation")
-    def test_short_sequence_validation(self, benchmark, sample_dna_sequence: str) -> None:
+    def test_short_sequence_validation(
+        self, benchmark, sample_dna_sequence: str
+    ) -> None:
         """Benchmark validation of short sequences."""
         result = benchmark(validate_dna_sequence, sample_dna_sequence)
         assert result is not None

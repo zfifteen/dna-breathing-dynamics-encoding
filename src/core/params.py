@@ -5,9 +5,6 @@ This module provides standardized parameter definitions, validation functions,
 and configuration management following scientific computing best practices.
 """
 
-from typing import Optional, Union
-import re
-
 # =============================================================================
 # Precision Settings
 # =============================================================================
@@ -70,9 +67,7 @@ MEMORY_ALIGNMENT = 64
 
 
 def validate_dna_sequence(
-    sequence: str,
-    allow_rna: bool = False,
-    allow_lowercase: bool = True
+    sequence: str, allow_rna: bool = False, allow_lowercase: bool = True
 ) -> str:
     """
     Validate DNA/RNA sequence composition.

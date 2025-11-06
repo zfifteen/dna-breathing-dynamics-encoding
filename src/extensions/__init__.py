@@ -5,4 +5,6 @@ This module provides optimized implementations of performance-critical
 algorithms using AMX instructions and SIMD operations.
 """
 
-__all__ = []
+from typing import List
+
+__all__: List[str] = []
