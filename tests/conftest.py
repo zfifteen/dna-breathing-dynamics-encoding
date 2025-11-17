@@ -92,15 +92,3 @@ def numpy_array_1d() -> np.ndarray:
 def numpy_array_2d() -> np.ndarray:
     """Provide a 2D numpy array for testing."""
     return np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
-
-
-# Markers for categorizing tests
-pytest_markers = {
-    "unit": "Unit tests",
-    "integration": "Integration tests",
-    "performance": "Performance benchmark tests",
-    "validation": "Scientific validation tests",
-    "smoke": "Quick smoke tests (<5s)",
-    "slow": "Slow tests (>5s)",
-    "apple_silicon": "Tests requiring Apple Silicon hardware",
-}

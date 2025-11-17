@@ -4,17 +4,12 @@ Setup script for DNA breathing dynamics framework.
 Handles C/C++ extension building with Apple Silicon optimization.
 """
 
-import os
 import platform
-import sys
-from pathlib import Path
 
-from setuptools import Extension, setup
+from setuptools import setup
 
 # Detect Apple Silicon
-IS_APPLE_SILICON = (
-    platform.system() == "Darwin" and platform.machine() == "arm64"
-)
+IS_APPLE_SILICON = platform.system() == "Darwin" and platform.machine() == "arm64"
 
 # Determine Homebrew prefix
 if IS_APPLE_SILICON:
@@ -35,10 +30,12 @@ EXTRA_LINK_ARGS = []
 
 # Apple Silicon specific optimizations
 if IS_APPLE_SILICON:
-    EXTRA_COMPILE_ARGS.extend([
-        "-mcpu=apple-m1",  # or detected M2/M3
-        "-DAPPLE_SILICON",
-    ])
+    EXTRA_COMPILE_ARGS.extend(
+        [
+            "-mcpu=apple-m1",  # Used as a baseline for all Apple Silicon chips (M1, M2, M3, etc.)
+            "-DAPPLE_SILICON",
+        ]
+    )
 
 # Include and library paths
 INCLUDE_DIRS = [
