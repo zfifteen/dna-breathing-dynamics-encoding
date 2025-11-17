@@ -25,7 +25,6 @@ def very_long_sequence() -> str:
     return "".join(rng.choice("ACGT") for _ in range(250_000))
 
 
-
 @pytest.mark.performance
 class TestSequenceValidationPerformance:
     """Benchmark sequence validation performance."""
@@ -39,9 +38,7 @@ class TestSequenceValidationPerformance:
         assert result is not None
 
     @pytest.mark.benchmark(group="validation")
-    def test_long_sequence_validation(
-        self, benchmark, long_sequence: str
-    ) -> None:
+    def test_long_sequence_validation(self, benchmark, long_sequence: str) -> None:
         """Benchmark validation of long sequences (10k bp)."""
         result = benchmark(validate_dna_sequence, long_sequence)
         assert result is not None
