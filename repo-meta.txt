@@ -1,5 +1,5 @@
 Repository Name: dna-breathing-dynamics-encoding
 
-Repository Description: A novel spectral DNA analysis framework focusing on the biological property of DNA breathing dynamics to predict CRISPR activity. This repository contains the implementation and validation of a new encoding that outperforms arbitrary encodings, with a Cohen's d of +4.130 for GC-affecting mutations.
+Repository Description: A novel spectral DNA analysis framework focusing on the biological property of DNA breathing dynamics to predict CRISPR activity. This repository contains the implementation and validation of a new encoding that outperforms arbitrary encodings with a Cohen's d of +4.130 for GC-affecting mutations.
 
 Topics: crispr, bioinformatics, signal-processing, dna, genomics, spectral-analysis, dna-breathing-dynamics, computational-biology
