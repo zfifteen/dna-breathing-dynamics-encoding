@@ -1,6 +1,6 @@
 # DNA Breathing Dynamics CZT Feature Extractor Gist
 
-This gist implements a biophysical encoding of DNA sequences into complex signals using base-pair breathing lifetimes (real part) and thermodynamic stability (imag part from SantaLucia-inspired ΔG), with optional helical phase modulation (2π/10.5 bp). It performs Chirp Z-Transform (CZT) zoomed to the helical harmonic (~1/10.5 cycles/bp) using scipy.signal.czt, extracts features (peak magnitude/phase, peak-to-skirt ratio, phase coherence, band energy, SNR, QC flag), generates controls (dinuc-approximate shuffles, phase scramble, label permutations), and computes statistics (Cohen's d with bootstrap CI, permutation p-values).
+This gist implements a biophysical encoding of DNA sequences into complex signals using base-pair breathing lifetimes (real part) and **SantaLucia 1998 Nearest-Neighbor ΔG° thermodynamics** (imag part), with optional helical phase modulation (2π/10.5 bp). It performs Chirp Z-Transform (CZT) zoomed to the helical harmonic (~1/10.5 cycles/bp) using scipy.signal.czt, extracts features (peak magnitude/phase, peak-to-skirt ratio, phase coherence, band energy, SNR, QC flag), generates controls (**dinucleotide-preserving shuffles**, phase scramble, label permutations), and computes statistics (Cohen's d with bootstrap CI, permutation p-values).
 
 ## Requirements
 - Python 3.12+

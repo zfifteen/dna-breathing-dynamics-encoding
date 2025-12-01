@@ -8,6 +8,7 @@ import numpy as np
 from typing import List, Dict, Tuple
 from pathlib import Path
 import random
+import collections
 
 try:
     from scipy import stats
@@ -17,12 +18,19 @@ except ImportError as e:
     sys.exit(1)
 
 
-def get_base_stability(base):
-    if base in "GC":
-        return -9.5
-    elif base in "AT":
-        return -7.5
-    raise ValueError(f"Invalid base: {base}")
+NEAREST_NEIGHBOR_DG = {
+    # SantaLucia 1998 Unified parameters (kcal/mol)
+    "AA": -1.00, "TT": -1.00,
+    "AT": -0.88,
+    "TA": -0.58,
+    "CA": -1.45, "TG": -1.45,
+    "GT": -1.44, "AC": -1.44,
+    "CT": -1.28, "AG": -1.28,
+    "GA": -1.30, "TC": -1.30,
+    "CG": -2.17,
+    "GC": -2.24,
+    "GG": -1.84, "CC": -1.84,
+}
 
 
 def encode_sequence(
@@ -39,45 +47,60 @@ def encode_sequence(
         raise ValueError("Empty sequence")
 
     valid_bases = set("ATGC")
+    # Simplified IUPAC handling for brevity in gist
     iupac_codes = {
-        "N": "ATGC",
-        "R": "AG",
-        "Y": "CT",
-        "S": "GC",
-        "W": "AT",
-        "K": "GT",
-        "M": "AC",
-        "B": "CGT",
-        "D": "AGT",
-        "H": "ACT",
-        "V": "ACG",
+        "N": "ATGC", "R": "AG", "Y": "CT", "S": "GC", "W": "AT",
+        "K": "GT", "M": "AC", "B": "CGT", "D": "AGT", "H": "ACT", "V": "ACG",
     }
 
     complex_signal = np.zeros(n, dtype=complex)
 
-    for i, base in enumerate(seq):
+    for i in range(n):
+        base = seq[i]
+        
+        # 1. Real Part: Lifetime
         if base in iupac_codes:
-            bases = list(iupac_codes[base])
             if iupac_policy == "mask":
-                complex_signal[i] = 0j
-                continue
-            elif iupac_policy == "average":
-                real_vals = [at_lifetime if b in "AT" else gc_lifetime for b in bases]
-                imag_vals = [get_base_stability(b) for b in bases]
-                real_part = np.mean(real_vals)
-                imag_part = np.mean(imag_vals)
+                real_part = 0.0
             else:
-                raise ValueError(f"Unknown iupac_policy: {iupac_policy}")
-        else:
-            if base not in valid_bases:
-                raise ValueError(f"Invalid base at pos {i}: {base}")
+                bases = list(iupac_codes[base])
+                real_vals = [at_lifetime if b in "AT" else gc_lifetime for b in bases]
+                real_part = np.mean(real_vals)
+        elif base in valid_bases:
             real_part = at_lifetime if base in "AT" else gc_lifetime
-            imag_part = get_base_stability(base)
+        else:
+             raise ValueError(f"Invalid base at pos {i}: {base}")
 
-        min_dg, max_dg = -11.0, -7.0
-        imag_part = (-imag_part - min_dg) / (max_dg - min_dg)
+        # 2. Imaginary Part: Stability (Dinucleotide)
+        # Assign DG(seq[i], seq[i+1]) to index i. Last base gets previous val or 0.
+        if i < n - 1:
+            dinuc = seq[i : i + 2]
+            # Handle IUPAC in dinuc
+            if any(b not in valid_bases for b in dinuc):
+                if iupac_policy == "mask":
+                    dg = 0.0
+                else:
+                    # Average over all expansions
+                    b1s = list(iupac_codes.get(dinuc[0], dinuc[0]))
+                    b2s = list(iupac_codes.get(dinuc[1], dinuc[1]))
+                    dgs = []
+                    for b1 in b1s:
+                        for b2 in b2s:
+                            if b1+b2 in NEAREST_NEIGHBOR_DG:
+                                dgs.append(NEAREST_NEIGHBOR_DG[b1+b2])
+                    dg = np.mean(dgs) if dgs else -1.5 # fallback
+            else:
+                dg = NEAREST_NEIGHBOR_DG.get(dinuc, -1.5)
+        else:
+            # Boundary condition: repeat last valid DG or neutral
+            dg = -1.5 
 
-        complex_signal[i] = complex(real_part, imag_part)
+        # Normalize DG to -1..1 or similar range for unit circle
+        # Range is approx -0.58 to -2.24. 
+        min_dg, max_dg = -2.5, -0.5 
+        norm_imag = (dg - min_dg) / (max_dg - min_dg) # 0..1 approx
+        
+        complex_signal[i] = complex(real_part, norm_imag)
 
     if apply_helical:
         phases = np.exp(1j * 2 * np.pi * np.arange(n) / helical_period)
@@ -156,14 +179,50 @@ def extract_features(freqs, spectrum, f0, band_width, guard_band=0.005):
     }
 
 
-def generate_shuffles(seq, num_shuffles=10, seed=42):
+def generate_dinuc_shuffles(seq, num_shuffles=10, seed=42):
+    """
+    Generate dinucleotide-preserving shuffles using a randomized Eulerian path 
+    approach with rejection sampling. Efficient for short sequences (e.g., CRISPR).
+    """
     random.seed(seed)
-    bases = list(seq)
+    n = len(seq)
+    if n < 2:
+        return [seq] * num_shuffles
+
+    # Build adjacency graph of transitions
+    edges = collections.defaultdict(list)
+    for i in range(n - 1):
+        edges[seq[i]].append(seq[i+1])
+    
+    start_node = seq[0]
     shuffles = []
+    
+    max_retries = 100
+    
     for _ in range(num_shuffles):
-        shuffled_bases = bases.copy()
-        np.random.shuffle(shuffled_bases)
-        shuffles.append("".join(shuffled_bases))
+        for attempt in range(max_retries):
+            # Deep copy edges to consume
+            current_edges = {k: list(v) for k, v in edges.items()}
+            # Shuffle the order of outgoing edges
+            for k in current_edges:
+                random.shuffle(current_edges[k])
+            
+            # Walk the graph
+            curr = start_node
+            path = [curr]
+            while current_edges[curr]:
+                next_node = current_edges[curr].pop()
+                path.append(next_node)
+                curr = next_node
+            
+            # Check if we visited all edges (length match)
+            if len(path) == n:
+                shuffles.append("".join(path))
+                break
+        else:
+            # Fallback if rejection sampling fails (rare for short seqs)
+            shuffles.append(seq)
+            
     return shuffles
 
 
@@ -194,33 +253,38 @@ def compute_stats(features_list, groups=None, num_bootstrap=100, num_perm=20, se
     if len(group1) < 2 or len(group2) < 2:
         return {"cohens_d": 0.0, "ci_low": 0.0, "ci_high": 0.0, "p_perm": 1.0}
 
-    cohens_d = (np.mean(group1) - np.mean(group2)) / np.sqrt(
-        (np.var(group1) + np.var(group2)) / 2
-    )
+    # Cohen's d
+    mean1, mean2 = np.mean(group1), np.mean(group2)
+    var1, var2 = np.var(group1, ddof=1), np.var(group2, ddof=1)
+    pooled_std = np.sqrt((var1 + var2) / 2)
+    cohens_d = (mean1 - mean2) / pooled_std if pooled_std > 0 else 0.0
 
+    # Bootstrap CI
     def bootstrap_d(bs_samples):
         bs_d = []
         for _ in range(bs_samples):
             bs_g1 = np.random.choice(group1, len(group1), replace=True)
             bs_g2 = np.random.choice(group2, len(group2), replace=True)
-            bs_d.append(
-                (np.mean(bs_g1) - np.mean(bs_g2))
-                / np.sqrt((np.var(bs_g1) + np.var(bs_g2)) / 2)
-            )
+            m1, m2 = np.mean(bs_g1), np.mean(bs_g2)
+            v1, v2 = np.var(bs_g1, ddof=1), np.var(bs_g2, ddof=1)
+            p_std = np.sqrt((v1 + v2) / 2)
+            d_val = (m1 - m2) / p_std if p_std > 0 else 0.0
+            bs_d.append(d_val)
         return np.percentile(bs_d, [2.5, 97.5])
 
     ci = bootstrap_d(num_bootstrap)
 
+    # Permutation Test
     def perm_p(perm_samples):
-        obs_diff = abs(np.mean(group1) - np.mean(group2))
+        obs_diff = abs(mean1 - mean2)
         perm_diffs = []
-        all_data = group1 + group2
-        labels = [0] * len(group1) + [1] * len(group2)
+        all_data = np.concatenate([group1, group2])
+        n1 = len(group1)
         for _ in range(perm_samples):
-            np.random.shuffle(labels)
-            perm_g1 = [all_data[i] for i, l in enumerate(labels) if l == 0]
-            perm_g2 = [all_data[i] for i, l in enumerate(labels) if l == 1]
-            perm_diff = abs(np.mean(perm_g1) - np.mean(perm_g2))
+            np.random.shuffle(all_data)
+            p_g1 = all_data[:n1]
+            p_g2 = all_data[n1:]
+            perm_diff = abs(np.mean(p_g1) - np.mean(p_g2))
             perm_diffs.append(perm_diff)
         p = np.mean([1 if diff >= obs_diff else 0 for diff in perm_diffs])
         return p
@@ -254,6 +318,7 @@ def load_sequences(input_file):
         with open(input_file, "r") as f:
             reader = csv.reader(f)
             for row in reader:
+                if not row: continue
                 if len(row) >= 1:
                     seqs.append(row[0])
                 if len(row) >= 2:
@@ -305,6 +370,7 @@ def main():
     features_list = []
     for i, seq in enumerate(seqs):
         try:
+            # 1. Original Sequence Analysis
             signal = encode_sequence(
                 seq,
                 args.at_lifetime,
@@ -322,10 +388,10 @@ def main():
             features = extract_features(freqs, spectrum, 1 / 10.5, args.band_width)
             features["seq_id"] = i
             features["seq_len"] = len(seq)
-            features["label"] = labels[i]
-            features_list.append(features)
+            features["label"] = labels[i] if i < len(labels) else "unknown"
 
-            shuffles = generate_shuffles(seq, args.num_shuffles, args.seed + i)
+            # 2. Dinucleotide Shuffle Analysis
+            shuffles = generate_dinuc_shuffles(seq, args.num_shuffles, args.seed + i)
             shuffle_features = []
             for shuf in shuffles:
                 shuf_signal = encode_sequence(
@@ -346,7 +412,22 @@ def main():
                     shuf_freqs, shuf_spectrum, 1 / 10.5, args.band_width
                 )
                 shuffle_features.append(shuf_feat["peak_mag"])
-            features["shuffle_mean_peak"] = np.mean(shuffle_features)
+            features["shuffle_mean_peak"] = np.mean(shuffle_features) if shuffle_features else 0.0
+
+            # 3. Phase Scramble Null Analysis
+            # Scramble the spectrum of the original signal
+            scramble_peaks = []
+            for k in range(args.num_shuffles):
+                # Use same count as shuffles for consistency
+                scrambled_spec = phase_scramble(spectrum, seed=args.seed + i + k*1000)
+                # Re-extract features from scrambled spectrum
+                scram_feat = extract_features(
+                   freqs, scrambled_spec, 1 / 10.5, args.band_width
+                )
+                scramble_peaks.append(scram_feat["peak_mag"])
+            features["phase_scramble_mean_peak"] = np.mean(scramble_peaks) if scramble_peaks else 0.0
+
+            features_list.append(features)
 
         except Exception as e:
             print(f"Error processing seq {i}: {e}", file=sys.stderr)
@@ -355,6 +436,12 @@ def main():
     group_labels = None
     if args.groups:
         group_labels = args.groups.split(",")
+    
+    # If labels are provided in CSV, override CLI groups if CLI groups not enough
+    # Actually, we prefer using the 'label' column from input if 'groups' arg not set
+    if not group_labels and len(set(labels)) > 1:
+        group_labels = labels
+
     stats_dict = compute_stats(
         features_list, group_labels, args.bootstrap_samples, args.num_perm, args.seed
     )
@@ -373,6 +460,7 @@ def main():
         "snr",
         "qc_flag",
         "shuffle_mean_peak",
+        "phase_scramble_mean_peak",
     ] + list(stats_dict.keys())
 
     if args.output:
