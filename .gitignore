@@ -75,3 +75,5 @@ benchmark.json
 
 # Logs
 *.log
+
+.snapshots/
