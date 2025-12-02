@@ -9,7 +9,7 @@ and thermodynamic stability encoding.
 Features:
 - Biophysics encoding: breathing lifetimes (τ) + thermodynamic stability (ΔG)
 - CZT spectral analysis focused on 10.5 bp/turn helical frequency
-- Feature extraction: mag_peak, band_energy, phase_at_peak, freq_eff
+- Feature extraction: mag_peak, band_energy, phase_peak, freq_eff
 - GC-content baseline comparison
 - Random encoding control (shuffled τ/ΔG)
 - Minimal stats: ROC AUC, Cohen's d, t-test/Mann-Whitney U
