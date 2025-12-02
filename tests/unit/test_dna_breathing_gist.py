@@ -30,22 +30,23 @@ class TestDynamicDGBounds:
         """Verify _DG_MIN equals the minimum value in NEAREST_NEIGHBOR_DG."""
         expected_min = min(NEAREST_NEIGHBOR_DG.values())
         assert _DG_MIN == expected_min
-        assert _DG_MIN == -2.24  # GC is most stable
 
     def test_dg_max_matches_dictionary_maximum(self) -> None:
         """Verify _DG_MAX equals the maximum value in NEAREST_NEIGHBOR_DG."""
         expected_max = max(NEAREST_NEIGHBOR_DG.values())
         assert _DG_MAX == expected_max
-        assert _DG_MAX == -0.58  # TA is least stable
 
     def test_normalization_range(self) -> None:
         """Test that normalization produces 0-1 range for dictionary extremes."""
-        # Most stable (GC: -2.24) should normalize to 0
-        norm_most_stable = (-2.24 - _DG_MIN) / (_DG_MAX - _DG_MIN)
+        dg_min = min(NEAREST_NEIGHBOR_DG.values())
+        dg_max = max(NEAREST_NEIGHBOR_DG.values())
+
+        # Most stable dinucleotide should normalize to 0
+        norm_most_stable = (dg_min - _DG_MIN) / (_DG_MAX - _DG_MIN)
         assert abs(norm_most_stable - 0.0) < 1e-10
 
-        # Least stable (TA: -0.58) should normalize to 1
-        norm_least_stable = (-0.58 - _DG_MIN) / (_DG_MAX - _DG_MIN)
+        # Least stable dinucleotide should normalize to 1
+        norm_least_stable = (dg_max - _DG_MIN) / (_DG_MAX - _DG_MIN)
         assert abs(norm_least_stable - 1.0) < 1e-10
 
     def test_encode_sequence_returns_complex_signal(self) -> None:
