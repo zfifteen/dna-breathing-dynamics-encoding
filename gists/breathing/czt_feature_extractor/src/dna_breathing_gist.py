@@ -38,6 +38,10 @@ NEAREST_NEIGHBOR_DG = {
     "CC": -1.84,
 }
 
+# Dynamically derive DG bounds from dictionary for accurate normalization
+_DG_MIN = min(NEAREST_NEIGHBOR_DG.values())  # Most stable (most negative)
+_DG_MAX = max(NEAREST_NEIGHBOR_DG.values())  # Least stable (least negative)
+
 
 def encode_sequence(
     seq,
@@ -111,10 +115,8 @@ def encode_sequence(
         else:
             dg = -1.5  # neutral for last base
 
-        # Normalize DG to -1..1 or similar range for unit circle
-        # Range is approx -0.58 to -2.24.
-        min_dg, max_dg = -2.5, -0.5
-        norm_imag = (dg - min_dg) / (max_dg - min_dg)  # 0..1 approx
+        # Normalize DG to 0..1 range using dynamically derived bounds
+        norm_imag = (dg - _DG_MIN) / (_DG_MAX - _DG_MIN)
 
         complex_signal[i] = complex(real_part, norm_imag)
 
