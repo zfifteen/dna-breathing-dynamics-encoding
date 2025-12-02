@@ -1,0 +1,1 @@
+**Scenario Invalidated and Discarded**: Referenced synthetic baselines from Scenario 1/2 (e.g., real_crispr.fasta). All artificial results deleted; re-run planned with real data only per TESTING_GUIDELINES.md.

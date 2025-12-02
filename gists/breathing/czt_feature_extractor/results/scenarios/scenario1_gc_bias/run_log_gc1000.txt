@@ -1,0 +1,5 @@
+Features extracted and saved.
+Peak Mag: d=-0.1833 [CI: -0.2960, -0.0640], p=0.0020
+SNR: d=-0.0261 [CI: -0.1449, 0.1100], p=0.6920
+Coherence: d=0.1461 [CI: 0.0274, 0.2714], p=0.0120
+Estimated Power: 0.0000

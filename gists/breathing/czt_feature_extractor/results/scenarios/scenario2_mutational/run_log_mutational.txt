@@ -1,0 +1,4 @@
+  File "/Users/velocityworks/IdeaProjects/dna_breathing_dynamics_encoding/gists/breathing/czt_feature_extractor/src/dna_breathing_gist.py", line 99
+    b1s = list(iupac_codes.get(dinuc[0], [dinuc[0]]))
+    ^
+IndentationError: expected an indented block after 'else' statement on line 97

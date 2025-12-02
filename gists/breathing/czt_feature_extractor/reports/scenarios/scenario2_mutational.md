@@ -1,0 +1,1 @@
+**Scenario Invalidated and Discarded**: Used synthetic mutations on real base (mutated_brunello.fasta with artificial AT→GC flips). All results deleted; re-run planned with real data only per TESTING_GUIDELINES.md.
