@@ -340,9 +340,9 @@ def compute_stats(features_list, groups=None, num_bootstrap=500, num_perm=100, s
             all_data = np.concatenate([group1, group2])
             n1 = len(group1)
             for _ in range(perm_samples):
-                np.random.shuffle(all_data)
-                p_g1 = all_data[:n1]
-                p_g2 = all_data[n1:]
+                permuted = np.random.permutation(all_data)
+                p_g1 = permuted[:n1]
+                p_g2 = permuted[n1:]
                 perm_diff = abs(np.mean(p_g1) - np.mean(p_g2))
                 perm_diffs.append(perm_diff)
             p = np.mean([1 if diff >= obs_diff else 0 for diff in perm_diffs])
