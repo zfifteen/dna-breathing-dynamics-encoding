@@ -1,0 +1,29 @@
+# data/datasets.yml
+# Catalog of curated datasets. Each entry contains metadata used by scripts and CI.
+
+# Example entry format:
+# - id: human_brulnello
+#   name: Brunello sgRNA library (subset)
+#   species: Homo sapiens
+#   taxon_id: 9606
+#   path: data/human/brunello/
+#   committed_files:
+#     - sequences.fasta
+#     - labels.csv
+#   license: CC-BY-4.0
+#   source_url: https://www.addgene.org/
+#   source_doi: 10.1038/nbt.3437
+#   notes: "seed subset created via curated sampling script"
+
+datasets:
+  - id: human_brunello
+    name: Brunello sgRNA library (subset)
+    species: Homo sapiens
+    taxon_id: 9606
+    path: data/human/brunello/
+    committed_files:
+      - sequences.fasta
+    license: "see source (Addgene / paper supplement)"
+    source_url: https://media.addgene.org/files/Brunello_library_v1.1_sequences.txt.zip
+    source_doi: 10.1038/nbt.3437
+    notes: "Seed subset created via curated sampling script; raw zip stored in data/raw/"

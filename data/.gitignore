@@ -1,0 +1,7 @@
+# Ignore raw archives and intermediate downloads
+raw/
+
+# Ignore OS/temp files
+.DS_Store
+Thumbs.db
+

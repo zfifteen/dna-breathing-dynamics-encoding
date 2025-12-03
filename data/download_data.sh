@@ -1,0 +1,1 @@
+curl -o /Users/velocityworks/IdeaProjects/dna_breathing_dynamics_encoding/data/raw/broadgpp-brunello-library-contents.txt "https://media.addgene.org/cms/filer_public/8b/4c/8b4c89d9-eac1-44b2-bb2f-8fea95672705/broadgpp-brunello-library-contents.txt"
