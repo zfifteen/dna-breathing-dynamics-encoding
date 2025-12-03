@@ -82,27 +82,44 @@ cp gists/breathing/czt_feature_extractor/data/processed/brunello.fasta data/raw/
 
 #### Step 2: Parse raw TSV to FASTA
 
-The raw file is a tab-separated format with (sequence, gene_name) pairs. Parse it:
+The raw file is a TSV (tab-separated values) with columns including:
+- Target Gene ID
+- Target Gene Symbol  
+- sgRNA Target Sequence (20nt)
+- Target Context Sequence (30nt)
+
+The file uses carriage returns (`\r`) as line separators. Parse it using:
 
 ```bash
 python3 -c "
-import sys
+import csv
 from pathlib import Path
 
 raw = Path('data/raw/broadgpp-brunello-library-contents.txt')
 fasta = Path('data/raw/brunello_parsed.fasta')
 
-content = raw.read_text().strip().split('\t')
+content = raw.read_text().replace('\r\n', '\n').replace('\r', '\n')
+lines = content.strip().split('\n')
+reader = csv.reader(lines, delimiter='\t')
+header = next(reader)
+
+# Find column indices
+seq_idx = header.index('sgRNA Target Sequence')  # Column 6
+gene_idx = header.index('Target Gene Symbol')     # Column 1
+id_idx = header.index('Target Gene ID')           # Column 0
+
 seqs = []
-for i in range(0, len(content), 2):
-    seq = content[i].upper()
-    gene = content[i+1] if i+1 < len(content) else 'Unknown'
-    if len(seq) == 20 and all(c in 'ACGT' for c in seq):
-        seqs.append((gene.replace(' ', '_'), seq))
+for row in reader:
+    if len(row) > seq_idx:
+        seq = row[seq_idx].strip().upper()
+        if len(seq) == 20 and all(c in 'ATGC' for c in seq):
+            gene = row[gene_idx] if len(row) > gene_idx else 'Unknown'
+            gene_id = row[id_idx] if len(row) > id_idx else 'Unknown'
+            seqs.append((gene.replace(' ', '_'), gene_id, seq))
 
 with open(fasta, 'w') as f:
-    for i, (gene, seq) in enumerate(seqs, 1):
-        f.write(f'>{gene}|{i}\n{seq}\n')
+    for gene, gene_id, seq in seqs:
+        f.write(f'>{gene}|{gene_id}\n{seq}\n')
 
 print(f'Parsed {len(seqs)} sequences')
 "
@@ -110,39 +127,10 @@ print(f'Parsed {len(seqs)} sequences')
 
 #### Step 3: Curate and subsample
 
+Use the canonical curation script:
+
 ```bash
 python scripts/curate_and_subsample.py --dataset human/brunello --max-seqs 1000 --seed 42
-```
-
-Or manually:
-
-```bash
-python3 -c "
-import random
-from pathlib import Path
-
-random.seed(42)
-fasta_in = Path('data/raw/brunello_parsed.fasta')
-fasta_out = Path('data/human/brunello/sequences.fasta')
-
-# Read sequences
-records = []
-header, seq = None, []
-for line in fasta_in.read_text().splitlines():
-    if line.startswith('>'):
-        if header: records.append((header[1:], ''.join(seq)))
-        header, seq = line, []
-    else: seq.append(line)
-if header: records.append((header[1:], ''.join(seq)))
-
-# Filter and subsample
-valid = [(h, s.upper()) for h, s in records if len(s) == 20 and all(c in 'ACGT' for c in s)]
-if len(valid) > 1000: valid = random.sample(valid, 1000)
-
-fasta_out.parent.mkdir(parents=True, exist_ok=True)
-fasta_out.write_text('\n'.join(f'>{h}\n{s}' for h, s in valid) + '\n')
-print(f'Wrote {len(valid)} sequences')
-"
 ```
 
 #### Step 4: Create seed/sample dataset

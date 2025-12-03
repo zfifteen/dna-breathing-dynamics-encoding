@@ -17,12 +17,18 @@
 #   1. Create necessary directories
 #   2. Download raw data files to data/raw/
 #   3. Parse raw files to FASTA format
-#   4. Curate and subsample to <=1000 sequences per dataset
+#   4. Curate and subsample to <=1000 sequences per dataset (using scripts/curate_and_subsample.py)
 #   5. Validate the curated datasets
 #
 # Note: data/raw/ is gitignored. Only curated files in data/<dataset>/ are committed.
 
 set -euo pipefail
+
+# Ensure BASH_SOURCE[0] is set
+if [[ -z "${BASH_SOURCE[0]:-}" ]]; then
+  echo "Error: BASH_SOURCE[0] is not set. Please run this script with Bash, not sh or another shell." >&2
+  exit 1
+fi
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -87,6 +93,7 @@ fi
 if [ -f "$BRUNELLO_RAW" ] && [ -s "$BRUNELLO_RAW" ] && [ ! -f "$BRUNELLO_FASTA" ]; then
     echo "  → Parsing raw TSV to FASTA format..."
     python3 << 'PYTHON_PARSER'
+import csv
 import sys
 from pathlib import Path
 
@@ -97,38 +104,59 @@ if not raw_path.exists():
     print("  ✗ Raw file not found")
     sys.exit(1)
 
-# Read and parse the TSV-like file (may be single line with tab-separated values)
-with open(raw_path, 'r') as f:
-    content = f.read()
-
-# Split by tabs and process pairs of (sequence, gene_name)
-parts = content.strip().split('\t')
-valid_seqs = []
-i = 0
-seq_num = 0
-
-while i < len(parts):
-    # Each record should have: sequence, then gene info
-    seq = parts[i].strip().upper() if i < len(parts) else ""
-    gene = parts[i+1].strip() if i+1 < len(parts) else ""
+try:
+    valid_seqs = []
+    with open(raw_path, "r") as f:
+        # The file uses carriage returns (\r) as line separators
+        content = f.read().replace('\r\n', '\n').replace('\r', '\n')
     
-    # Handle empty or missing gene names
-    if not gene:
-        gene = "Unknown"
+    # Parse as CSV with tab delimiter
+    lines = content.strip().split('\n')
+    reader = csv.reader(lines, delimiter='\t')
+    header = next(reader)
     
-    # Validate: 20bp, ACGT only
-    if len(seq) == 20 and all(c in "ACGT" for c in seq):
-        seq_num += 1
-        header = f">{gene.replace(' ', '_')}|{seq_num}"
-        valid_seqs.append((header, seq))
+    # Find column indices
+    # Expected columns: Target Gene ID, Target Gene Symbol, Target Transcript, 
+    # Genomic Sequence, Position, Strand, sgRNA Target Sequence, Target Context Sequence, ...
+    try:
+        seq_idx = header.index("sgRNA Target Sequence")
+        gene_idx = header.index("Target Gene Symbol")
+        id_idx = header.index("Target Gene ID")
+    except ValueError as e:
+        # Fallback indices if header doesn't match exactly
+        print(f"  ⚠ Warning: Column header not found ({e}), using fallback indices")
+        seq_idx = 6   # sgRNA Target Sequence
+        gene_idx = 1  # Target Gene Symbol
+        id_idx = 0    # Target Gene ID
+        # Validate fallback indices are reasonable
+        if len(header) <= seq_idx:
+            print(f"  ✗ Error: TSV has only {len(header)} columns, expected at least {seq_idx+1}")
+            sys.exit(1)
     
-    i += 2  # Move to next pair
+    for row_num, row in enumerate(reader, 1):
+        if len(row) > seq_idx:
+            seq = row[seq_idx].strip().upper()
+            # Validate sequence: 20bp and only ACGT (matching curate_and_subsample.py)
+            if len(seq) == 20 and all(c in "ACGT" for c in seq):
+                gene = row[gene_idx].strip() if len(row) > gene_idx else ""
+                sg_id = row[id_idx].strip() if len(row) > id_idx else str(row_num)
+                # Handle empty gene names
+                if not gene:
+                    gene = "Unknown"
+                # Clean gene name for FASTA header
+                gene = gene.replace(" ", "_")
+                fasta_header = f">{gene}|{sg_id}"
+                valid_seqs.append((fasta_header, seq))
+    
+    with open(fasta_path, "w") as f:
+        for header, seq in valid_seqs:
+            f.write(header + "\n" + seq + "\n")
+    
+    print(f"  ✓ Parsed {len(valid_seqs)} valid 20nt sequences to {fasta_path}")
 
-with open(fasta_path, 'w') as f:
-    for header, seq in valid_seqs:
-        f.write(f"{header}\n{seq}\n")
-
-print(f"  ✓ Parsed {len(valid_seqs)} valid 20nt sequences to {fasta_path}")
+except Exception as e:
+    print(f"  ✗ Error during parsing: {e}")
+    sys.exit(1)
 PYTHON_PARSER
 fi
 
@@ -141,66 +169,11 @@ if [ ! -f "$BRUNELLO_FASTA" ]; then
     fi
 fi
 
-# Curate and subsample to 1000 sequences
+# Curate and subsample to 1000 sequences using the canonical script
 if [ -f "$BRUNELLO_FASTA" ]; then
     echo "  → Curating and subsampling to 1000 sequences..."
-    python3 << 'PYTHON_CURATE'
-import random
-import hashlib
-from pathlib import Path
-
-random.seed(42)  # Reproducibility
-
-fasta_in = Path("data/raw/brunello_parsed.fasta")
-fasta_out = Path("data/human/brunello/sequences.fasta")
-
-# Read all sequences
-records = []
-header = None
-seq_lines = []
-with open(fasta_in, 'r') as f:
-    for line in f:
-        line = line.strip()
-        if not line:
-            continue
-        if line.startswith(">"):
-            if header is not None:
-                records.append((header, "".join(seq_lines)))
-            header = line[1:]
-            seq_lines = []
-        else:
-            seq_lines.append(line)
-    if header is not None:
-        records.append((header, "".join(seq_lines)))
-
-print(f"  → Read {len(records)} sequences from {fasta_in}")
-
-# Filter: 20nt, ACGT only
-filtered = [(h, s.upper()) for h, s in records 
-            if len(s) == 20 and all(c in "ACGT" for c in s.upper())]
-print(f"  → {len(filtered)} sequences pass validation")
-
-# Subsample to 1000
-if len(filtered) > 1000:
-    filtered = random.sample(filtered, 1000)
-    print(f"  → Subsampled to 1000 sequences (seed=42)")
-
-# Write output
-fasta_out.parent.mkdir(parents=True, exist_ok=True)
-with open(fasta_out, 'w') as f:
-    for header, seq in filtered:
-        f.write(f">{header}\n{seq}\n")
-
-# Compute SHA256
-h = hashlib.sha256()
-with open(fasta_out, 'rb') as f:
-    for chunk in iter(lambda: f.read(8192), b''):
-        h.update(chunk)
-sha256 = h.hexdigest()
-
-print(f"  ✓ Wrote {len(filtered)} sequences to {fasta_out}")
-print(f"  → SHA256: {sha256}")
-PYTHON_CURATE
+    echo "    (using scripts/curate_and_subsample.py)"
+    python3 scripts/curate_and_subsample.py --dataset human/brunello --max-seqs 1000 --seed 42
 else
     echo "  ✗ No parsed FASTA found. Check download."
     exit 1
@@ -215,46 +188,19 @@ echo "[Step 3] Processing seed/sample dataset..."
 echo "  Source: Derived from human/brunello (first 3 sequences)"
 echo ""
 
-# Create minimal sample for CI/tests
-python3 << 'PYTHON_SAMPLE'
-from pathlib import Path
+# Create minimal sample for CI/tests by taking first 3 sequences from brunello
+BRUNELLO_OUT="data/human/brunello/sequences.fasta"
+SAMPLE_OUT="data/seed/sample/sequences.fasta"
 
-source = Path("data/human/brunello/sequences.fasta")
-dest = Path("data/seed/sample/sequences.fasta")
-
-if not source.exists():
-    print("  ✗ Source file not found. Run Brunello curation first.")
-    exit(1)
-
-# Read first 3 sequences
-records = []
-header = None
-seq_lines = []
-with open(source, 'r') as f:
-    for line in f:
-        line = line.strip()
-        if not line:
-            continue
-        if line.startswith(">"):
-            if header is not None:
-                records.append((header, "".join(seq_lines)))
-            header = line[1:]
-            seq_lines = []
-        else:
-            seq_lines.append(line)
-    if header is not None:
-        records.append((header, "".join(seq_lines)))
-
-# Take first 3
-sample = records[:3]
-
-dest.parent.mkdir(parents=True, exist_ok=True)
-with open(dest, 'w') as f:
-    for header, seq in sample:
-        f.write(f">{header}\n{seq}\n")
-
-print(f"  ✓ Created sample with {len(sample)} sequences at {dest}")
-PYTHON_SAMPLE
+if [ -f "$BRUNELLO_OUT" ]; then
+    # Extract first 3 sequences (6 lines: 3 headers + 3 sequences)
+    head -6 "$BRUNELLO_OUT" > "$SAMPLE_OUT"
+    count=$(grep -c "^>" "$SAMPLE_OUT" || echo 0)
+    echo "  ✓ Created sample with $count sequences at $SAMPLE_OUT"
+else
+    echo "  ✗ Source file not found. Run Brunello curation first."
+    exit 1
+fi
 
 echo ""
 

@@ -9,7 +9,7 @@ raw_filename: brunello_parsed.fasta
 raw_source_file: broadgpp-brunello-library-contents.txt
 committed_files:
   - sequences.fasta
-committed_sha256: 8e2314270494d005f5130f0f12cc2382ed8ce85e41cc61b2fb5a123e93a0ecdf
+committed_sha256: 4874d56903c09bbd1290d643ebbfd8a0c70d228bf64c9e0ff5c457aa743ede95
 citation: "Doench et al., 2016, Nature Biotechnology. DOI: 10.1038/nbt.3437"
 license: "see source (Addgene / paper supplement)"
 curation_command: |
