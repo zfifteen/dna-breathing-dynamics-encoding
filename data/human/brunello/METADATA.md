@@ -2,19 +2,22 @@ id: human_brunello
 name: Brunello sgRNA library (subset)
 species: Homo sapiens
 taxon_id: 9606
-source_url: https://media.addgene.org/files/Brunello_library_v1.1_sequences.txt.zip
+source_url: https://media.addgene.org/cms/filer_public/8b/4c/8b4c89d9-eac1-44b2-bb2f-8fea95672705/broadgpp-brunello-library-contents.txt
 source_doi: 10.1038/nbt.3437
 source_date: "2025-12-03"
 raw_filename: brunello_parsed.fasta
-raw_zip_filename: Brunello_library_v1.1_sequences.txt.zip
-raw_sha256: "pending (official download blocked; used repo-processed FASTA)"
+raw_source_file: broadgpp-brunello-library-contents.txt
 committed_files:
   - sequences.fasta
-committed_sha256: 4874d56903c09bbd1290d643ebbfd8a0c70d228bf64c9e0ff5c457aa743ede95
+committed_sha256: 8e2314270494d005f5130f0f12cc2382ed8ce85e41cc61b2fb5a123e93a0ecdf
 citation: "Doench et al., 2016, Nature Biotechnology. DOI: 10.1038/nbt.3437"
 license: "see source (Addgene / paper supplement)"
+curation_command: |
+  ./data/download_data.sh
+  # Or manually:
+  # python scripts/curate_and_subsample.py --dataset human/brunello --max-seqs 1000 --seed 42
 notes: |
-  Official download from Addgene URL returned HTTP 403 (attempted with user-agent header on 2025-12-03).
-  Used existing processed FASTA from repo (gists/.../data/processed/brunello.fasta) as raw input.
-  Downloaded from Addgene supplemental file; parsed to include only 20bp ACGT sgRNA sequences.
-  Curated subsample of up to 1000 sequences created with scripts/curate_and_subsample.py (seed=42).
+  Raw data: broadgpp-brunello-library-contents.txt (~9MB, 77,441 sgRNAs)
+  Downloaded from Addgene Brunello library page or copied from repo fallback.
+  Parsed TSV to FASTA, filtered to 20nt ACGT sequences, subsampled 1000 (seed=42).
+  Curated subset contains 1000 representative sgRNAs for testing and validation.

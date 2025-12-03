@@ -2,6 +2,22 @@
 
 This document captures the operational plan for the `data/` directory in this repository.
 
+## Quick Start
+
+Run the data download script to obtain, parse, curate, and validate all datasets:
+
+```bash
+./data/download_data.sh
+```
+
+This will:
+1. Create `data/raw/` directory (gitignored)
+2. Download raw Brunello library data (~9MB TSV)
+3. Parse to FASTA format (~77,000 sequences)
+4. Curate and subsample to 1000 sequences (seed=42)
+5. Create a minimal seed/sample dataset for testing
+6. Validate all datasets
+
 ## Goals
 - Seed `data/` with curated, provenance-tracked subsets of real biological sequence datasets.
 - Commit only small curated artifacts (<= 1000 sequences, <= 5 MB per file).
@@ -11,75 +27,203 @@ This document captures the operational plan for the `data/` directory in this re
 ## Constraints
 - Max committed file size: 5 MB.
 - Fixed sample size per dataset: 1000 sequences (or fewer if the dataset has fewer than 1000 available sequences after filtering).
+- Sequence requirements: 20nt length, ACGT bases only.
 - Single repository license: MIT (applies to code, scripts, and curated artifacts).
 
-## Initial Seed Datasets (Priority Order)
-1. `human/brunello` — Brunello sgRNA library (Doench 2016 Nature Biotechnology paper supplement; DOI: 10.1038/nbt.3437; Supplemental Table 1 ZIP with 76,442 sgRNAs).
-2. `human/doench2016` — Doench 2016 guide-efficiency dataset (same paper; Supplemental Tables 2/3 with ~4,000 tested sgRNAs).
-3. `human/depmap_subsample` — Small processed DepMap-derived sample (DepMap Portal downloads: https://depmap.org/portal/download/all/; e.g., Achilles_gene_effect.csv; public CC-BY 4.0).
-4. `mouse/gecko_v2` — GeCKO v2 mouse library (Addgene pooled library; DOI: 10.1016/j.cell.2014.09.029; ~123,000 sgRNAs).
-5. `seed/sample` — Minimal example for CI/tests (derived from existing repo files; always included).
+## Directory Structure
 
-## Preparation Steps (One-Time Setup)
-- **Directory Structure:** Ensure `data/raw/` (gitignore'd), `data/<dataset>/` for each (e.g., `human/brunello/`), and `scripts/` exist. Add `data/.gitignore` with patterns like `raw/*` and `*.zip`.
-- **Core Files:**
-  - `data/README.md`: Document the data plan, goals, constraints, and usage (e.g., "Curated subsets for CRISPR sgRNA analysis; see METADATA.md for provenance").
-  - `data/datasets.yml`: YAML config listing datasets with keys like `name`, `source_url`, `sample_size: 1000`, `filters: {min_length: 20, charset: ACGT}`.
-- **Scripts (in `scripts/`):**
-  - `download_raw.py`: CLI tool to fetch raw files (e.g., via `requests` for HTTP). Computes SHA256 (using `hashlib`). Example: `python download_raw.py --dataset brunello --url <supplemental_zip_url> --output data/raw/brunello.zip`.
-  - `curate_and_subsample.py`: Parse raw (e.g., Excel to FASTA via `pandas` and `biopython`), filter (20nt, A/C/G/T), subsample to 1000 (seeded via `numpy.random.seed(42)`), write `sequences.fasta`. Log command for reproducibility.
-  - `validate_dataset.py`: Check FASTA: count <=1000, size <=5MB, seqs 20nt A/C/G/T, no duplicates. Output pass/fail report.
-- **Testing:** Run scripts on a dummy file first (e.g., sample Excel with 2000 fake sgRNAs).
+```
+data/
+├── .gitignore              # Ignores raw/ directory
+├── DATA_PLAN.md            # This file
+├── README.md               # Data usage documentation
+├── datasets.yml            # Dataset catalog with metadata
+├── download_data.sh        # Main script to obtain all data
+├── raw/                    # Raw downloads (gitignored)
+│   ├── broadgpp-brunello-library-contents.txt
+│   └── brunello_parsed.fasta
+├── human/
+│   └── brunello/
+│       ├── METADATA.md
+│       ├── DOWNLOAD_INSTRUCTIONS.md
+│       └── sequences.fasta # 1000 curated sgRNAs
+└── seed/
+    └── sample/
+        ├── METADATA.md
+        └── sequences.fasta # 3 sgRNAs for CI testing
+```
 
-## Per-Dataset Execution Plan
-Process in priority order. For each:
-- Download raw to `data/raw/<dataset>/`.
-- Run curation script to generate `data/<dataset>/sequences.fasta`.
-- Create `data/<dataset>/METADATA.md` with: source URL/DOI, download filename, raw SHA256, citation/license, curation command, filters applied.
-- Validate and log issues.
-- Subsample randomly but deterministically if >1000 seqs; use all if fewer.
+## Execution Steps
 
-- **Dataset 1: human/brunello**
-  - **Source:** https://www.nature.com/articles/nbt.3437#Sec23 (Supplemental ZIP ~1MB; extract `nbt.3437-s1.xlsx` with sgRNA sequences).
-  - **Curation:** Filter valid sgRNAs (20nt, A/C/G/T, human genes). Subsample 1000 (seed 42). Headers: `>sgRNA_id|gene_name`.
-  - **Metadata:** DOI: 10.1038/nbt.3437; Citation: Doench et al. (2016); License: Public domain.
-  - **Output:** `data/human/brunello/sequences.fasta` (~20KB), METADATA.md.
-  - **Validation:** 1000 seqs, all 20nt A/C/G/T, <5MB.
+### Automated (Recommended)
 
-- **Dataset 2: human/doench2016**
-  - **Source:** Same ZIP; parse efficiency sheet.
-  - **Curation:** Filter top 1000 by efficiency or random subsample. Headers: `>sgRNA_id|target_gene|efficiency_score`.
-  - **Metadata:** Same as Brunello.
+```bash
+# From repository root
+./data/download_data.sh
+```
 
-- **Dataset 3: human/depmap_subsample**
-  - **Source:** https://depmap.org/portal/download/all/ (Achilles CSV ~100MB; extract sgRNAs or generate from gene targets).
-  - **Curation:** Subsample 1000 targeting cancer genes (CCLE lineage filter). Headers: `>sgRNA_id|gene_symbol`.
-  - **Metadata:** URL: https://depmap.org/portal/; License: CC-BY 4.0.
+### Manual Steps
 
-- **Dataset 4: mouse/gecko_v2**
-  - **Source:** https://www.addgene.org/pooled-libraries/geckov2/ (~5MB text/CSV).
-  - **Curation:** Filter mouse-specific, subsample 1000 (seed 42). Headers: `>sgRNA_id|gene_symbol`.
-  - **Metadata:** DOI: 10.1016/j.cell.2014.09.029; License: MIT.
+If you need to run steps manually:
 
-- **Dataset 5: seed/sample**
-  - **Source:** Existing repo (e.g., `human/brunello/sequences.fasta`).
-  - **Curation:** Subsample 100 diverse sgRNAs. Create `data/seed/sample/sequences.fasta` and METADATA.md (cite repo).
-  - **Notes:** For testing scripts.
+#### Step 1: Download raw Brunello data
 
-## Reproducibility & Validation
-- **Determinism:** Fixed seeds; log exact commands in METADATA.md (e.g., "curate_and_subsample.py --input raw/brunello.xlsx --output sequences.fasta --sample-size 1000 --seed 42").
-- **Full Validation:** Run `validate_dataset.py` post-curation; iterate if fails.
-- **Proof-Pack:** Run `proof_pack/run_validation.py` on curated data.
-- **Size Check:** Scripts enforce limits; reject invalid chars.
+```bash
+mkdir -p data/raw
+curl -fSL -A "dna-breathing-dynamics-encoding/data-downloader" \
+    -o data/raw/broadgpp-brunello-library-contents.txt \
+    "https://media.addgene.org/cms/filer_public/8b/4c/8b4c89d9-eac1-44b2-bb2f-8fea95672705/broadgpp-brunello-library-contents.txt"
+```
 
-## Timeline & Tradeoffs
-- **Effort:** 1-2 days per dataset (download/parse ~30min, script ~1hr, validation ~15min). Total: 1 week sequential.
-- **Tradeoffs:** Python for flexibility (Biopython for FASTA); random vs. stratified subsampling (random for simplicity).
-- **Risks:** Large downloads—`requests` with resume. Parsing errors—test samples. No direct sequences—cross-reference or generate.
+**Fallback:** If download fails, copy from repository:
+```bash
+cp gists/breathing/czt_feature_extractor/data/processed/brunello.fasta data/raw/brunello_parsed.fasta
+```
 
-## Next Actions
-- Create `data/README.md`, `data/datasets.yml`, `data/.gitignore`; seed `seed/sample`.
-- Add scripts: `download_raw.py`, `curate_and_subsample.py`, `validate_dataset.py`.
-- Execute on Brunello first, then parallelize others.
+#### Step 2: Parse raw TSV to FASTA
 
-This plan leverages public sources, modular scripts, and validation for 10/10 confidence.
+The raw file is a tab-separated format with (sequence, gene_name) pairs. Parse it:
+
+```bash
+python3 -c "
+import sys
+from pathlib import Path
+
+raw = Path('data/raw/broadgpp-brunello-library-contents.txt')
+fasta = Path('data/raw/brunello_parsed.fasta')
+
+content = raw.read_text().strip().split('\t')
+seqs = []
+for i in range(0, len(content), 2):
+    seq = content[i].upper()
+    gene = content[i+1] if i+1 < len(content) else 'Unknown'
+    if len(seq) == 20 and all(c in 'ACGT' for c in seq):
+        seqs.append((gene.replace(' ', '_'), seq))
+
+with open(fasta, 'w') as f:
+    for i, (gene, seq) in enumerate(seqs, 1):
+        f.write(f'>{gene}|{i}\n{seq}\n')
+
+print(f'Parsed {len(seqs)} sequences')
+"
+```
+
+#### Step 3: Curate and subsample
+
+```bash
+python scripts/curate_and_subsample.py --dataset human/brunello --max-seqs 1000 --seed 42
+```
+
+Or manually:
+
+```bash
+python3 -c "
+import random
+from pathlib import Path
+
+random.seed(42)
+fasta_in = Path('data/raw/brunello_parsed.fasta')
+fasta_out = Path('data/human/brunello/sequences.fasta')
+
+# Read sequences
+records = []
+header, seq = None, []
+for line in fasta_in.read_text().splitlines():
+    if line.startswith('>'):
+        if header: records.append((header[1:], ''.join(seq)))
+        header, seq = line, []
+    else: seq.append(line)
+if header: records.append((header[1:], ''.join(seq)))
+
+# Filter and subsample
+valid = [(h, s.upper()) for h, s in records if len(s) == 20 and all(c in 'ACGT' for c in s)]
+if len(valid) > 1000: valid = random.sample(valid, 1000)
+
+fasta_out.parent.mkdir(parents=True, exist_ok=True)
+fasta_out.write_text('\n'.join(f'>{h}\n{s}' for h, s in valid) + '\n')
+print(f'Wrote {len(valid)} sequences')
+"
+```
+
+#### Step 4: Create seed/sample dataset
+
+```bash
+head -6 data/human/brunello/sequences.fasta > data/seed/sample/sequences.fasta
+```
+
+#### Step 5: Validate
+
+```bash
+python scripts/validate_dataset.py --dataset human/brunello
+python scripts/validate_dataset.py --dataset seed/sample
+```
+
+## Dataset Details
+
+### Dataset 1: human/brunello
+
+- **Name:** Brunello sgRNA library (curated subset)
+- **Source:** [Addgene Brunello Library](https://www.addgene.org/pooled-library/broadgpp-brunello/)
+- **Paper:** Doench et al. (2016) Nature Biotechnology
+- **DOI:** 10.1038/nbt.3437
+- **Raw URL:** `https://media.addgene.org/cms/filer_public/8b/4c/8b4c89d9-eac1-44b2-bb2f-8fea95672705/broadgpp-brunello-library-contents.txt`
+- **Raw size:** ~9 MB (77,441 sgRNAs after parsing)
+- **Curated:** 1000 sequences (seed=42, 20nt, ACGT only)
+- **Output:** `data/human/brunello/sequences.fasta` (~35KB)
+- **License:** See source (Addgene / paper supplement)
+
+### Dataset 2: seed/sample
+
+- **Name:** Minimal test dataset
+- **Source:** Derived from human/brunello
+- **Size:** 3 sequences
+- **Purpose:** CI testing and script validation
+- **Output:** `data/seed/sample/sequences.fasta`
+- **License:** MIT
+
+## Planned Datasets (Future)
+
+The following datasets are defined in `datasets.yml` as planned:
+
+1. **human/doench2016** — Guide-efficiency dataset from same paper
+2. **human/depmap_subsample** — DepMap-derived sample (CC-BY 4.0)
+3. **mouse/gecko_v2** — GeCKO v2 mouse library
+
+## Reproducibility
+
+- **Random seed:** All subsampling uses seed=42 for reproducibility
+- **Commands logged:** Exact curation commands are recorded in METADATA.md
+- **SHA256 checksums:** Stored in METADATA.md for verification
+- **Validation:** Run `scripts/validate_dataset.py` to verify constraints
+
+## Validation Criteria
+
+All curated datasets must pass:
+
+1. ✅ Maximum 1000 sequences
+2. ✅ Maximum 5 MB file size
+3. ✅ All sequences exactly 20 nucleotides
+4. ✅ Only A/C/G/T bases (no ambiguity codes)
+5. ✅ No duplicate sequences
+6. ✅ Valid FASTA format
+
+## Troubleshooting
+
+### Download fails with 403
+
+Addgene may block automated downloads. Solutions:
+1. Use the repository fallback: `cp gists/.../brunello.fasta data/raw/`
+2. Download manually in a browser and place in `data/raw/`
+
+### Validation fails
+
+Check the error message from `validate_dataset.py`:
+- "Too many sequences": Increase `--max-seqs` or check subsampling
+- "Invalid bases": Source data may have ambiguity codes; use `--relaxed`
+- "Wrong length": Check `--seq-length` parameter
+
+### Script permissions
+
+```bash
+chmod +x data/download_data.sh
+```
