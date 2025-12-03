@@ -33,6 +33,7 @@ ALLOWED_RELAXED = set(list("ATGCatgcNRYKMSWBDHVrykmswbdhv"))
 DEFAULT_MAX_SEQS = 1000
 DEFAULT_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
 DEFAULT_SEQ_LENGTH = 20
+FASTA_LINE_WIDTH = 80
 
 
 def sha256_of_file(path):
@@ -48,7 +49,7 @@ def read_fasta_simple(path):
     records = []
     header = None
     seq_lines = []
-    with open(path, "r") as f:
+    with open(path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -66,12 +67,11 @@ def read_fasta_simple(path):
 
 
 def write_fasta(records, path):
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         for header, seq in records:
             f.write(f">{header}\n")
-            # wrap at 80
-            for i in range(0, len(seq), 80):
-                f.write(seq[i:i + 80] + "\n")
+            for i in range(0, len(seq), FASTA_LINE_WIDTH):
+                f.write(seq[i:i + FASTA_LINE_WIDTH] + "\n")
 
 
 def filter_records(records, allowed_bases, seq_length=None):

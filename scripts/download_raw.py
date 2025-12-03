@@ -48,7 +48,14 @@ def main():
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Downloading {args.url} -> {out_path}")
-    r = requests.get(args.url, stream=True, timeout=60)
+    headers = {"User-Agent": "dna-breathing-dynamics-encoding/data-downloader"}
+    r = requests.get(
+        args.url,
+        stream=True,
+        timeout=60,
+        verify=True,
+        headers=headers,
+    )
     if r.status_code != 200:
         print(f"Failed to download: HTTP {r.status_code}")
         sys.exit(2)

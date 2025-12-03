@@ -38,7 +38,7 @@ def sha256_of_file(path: Path) -> str:
 
 def parse_metadata(meta_path: Path) -> dict:
     meta = {}
-    with open(meta_path, "r") as f:
+    with open(meta_path, "r", encoding="utf-8") as f:
         for line in f:
             if ":" in line:
                 k, v = line.split(":", 1)
@@ -51,7 +51,7 @@ def read_fasta_sequences(path: Path) -> list:
     records = []
     header = None
     seq_lines = []
-    with open(path, "r") as f:
+    with open(path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
