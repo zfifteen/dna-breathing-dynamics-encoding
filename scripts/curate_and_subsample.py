@@ -10,7 +10,8 @@ and `data/raw/<raw_filename>` to exist. It will write curated outputs into
 
 The script enforces these constraints:
 - At most 1000 sequences (configurable via --max-seqs)
-- Only ATGC and common IUPAC codes allowed (basic filter)
+- Sequences must be exactly 20nt (configurable via --seq-length)
+- Only A/C/G/T bases allowed (strict mode)
 - Output files must be <= 5 MB (checked after writing)
 
 The script is intentionally small and avoids external heavy deps; it uses
@@ -20,17 +21,18 @@ simple parser.
 """
 
 import argparse
-import os
-import random
-import textwrap
 import hashlib
+import random
 from pathlib import Path
 
-# Allowed bases (IUPAC basic set)
-ALLOWED = set(list("ATGCatgcNRYKMSWBDHVrykmswbdhv"))
+# Allowed bases for strict mode (ACGT only as per data plan)
+ALLOWED_STRICT = set("ACGTacgt")
+# Allowed bases for relaxed mode (includes IUPAC ambiguity codes)
+ALLOWED_RELAXED = set(list("ATGCatgcNRYKMSWBDHVrykmswbdhv"))
 
 DEFAULT_MAX_SEQS = 1000
 DEFAULT_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+DEFAULT_SEQ_LENGTH = 20
 
 
 def sha256_of_file(path):
@@ -69,26 +71,60 @@ def write_fasta(records, path):
             f.write(f">{header}\n")
             # wrap at 80
             for i in range(0, len(seq), 80):
-                f.write(seq[i:i+80] + "\n")
+                f.write(seq[i:i + 80] + "\n")
 
 
-def filter_records(records):
+def filter_records(records, allowed_bases, seq_length=None):
+    """Filter records by allowed bases and optionally exact sequence length."""
     good = []
     for header, seq in records:
         if not seq:
             continue
-        if any(ch not in ALLOWED for ch in seq):
+        if any(ch not in allowed_bases for ch in seq):
+            continue
+        if seq_length is not None and len(seq) != seq_length:
             continue
         good.append((header, seq.upper()))
     return good
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", required=True)
-    parser.add_argument("--max-seqs", type=int, default=DEFAULT_MAX_SEQS)
-    parser.add_argument("--max-bytes", type=int, default=DEFAULT_MAX_BYTES)
-    parser.add_argument("--seed", type=int, default=42)
+    parser = argparse.ArgumentParser(
+        description="Curate and subsample raw datasets into small curated artifacts."
+    )
+    parser.add_argument("--dataset", required=True, help="Dataset identifier")
+    parser.add_argument(
+        "--max-seqs",
+        type=int,
+        default=DEFAULT_MAX_SEQS,
+        help=f"Maximum number of sequences (default: {DEFAULT_MAX_SEQS})",
+    )
+    parser.add_argument(
+        "--max-bytes",
+        type=int,
+        default=DEFAULT_MAX_BYTES,
+        help=f"Maximum output file size in bytes (default: {DEFAULT_MAX_BYTES})",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducible subsampling (default: 42)",
+    )
+    parser.add_argument(
+        "--seq-length",
+        type=int,
+        default=DEFAULT_SEQ_LENGTH,
+        help=(
+            f"Required sequence length (default: {DEFAULT_SEQ_LENGTH}). "
+            "Set to 0 to disable length filtering."
+        ),
+    )
+    parser.add_argument(
+        "--relaxed",
+        action="store_true",
+        help="Allow IUPAC ambiguity codes (N, R, Y, etc.) in addition to ACGT",
+    )
     args = parser.parse_args()
 
     random.seed(args.seed)
@@ -112,15 +148,21 @@ def main():
 
     raw_path = Path("data") / "raw" / raw_filename
     if not raw_path.exists():
-        print(f"Raw file not found at {raw_path}. Place the raw archive in data/raw/")
+        print(f"Raw file not found at {raw_path}. Place raw file in data/raw/")
         raise SystemExit(2)
 
     # For now assume raw file is a plain FASTA; future: support zip/tar extracts
     records = read_fasta_simple(raw_path)
     print(f"Read {len(records)} records from {raw_path}")
 
-    records = filter_records(records)
-    print(f"{len(records)} records remain after filtering by allowed bases")
+    # Filter by bases and length
+    allowed_bases = ALLOWED_RELAXED if args.relaxed else ALLOWED_STRICT
+    seq_length = args.seq_length if args.seq_length > 0 else None
+    records = filter_records(records, allowed_bases, seq_length)
+    print(f"{len(records)} records remain after filtering")
+    if seq_length:
+        bases_msg = "ACGT+IUPAC" if args.relaxed else "ACGT only"
+        print(f"  (required length: {seq_length}nt, bases: {bases_msg})")
 
     if len(records) == 0:
         print("No valid records after filtering; aborting")
@@ -129,25 +171,42 @@ def main():
     # subsample
     if len(records) > args.max_seqs:
         records = random.sample(records, args.max_seqs)
-        print(f"Subsampled to {len(records)} sequences")
+        print(f"Subsampled to {len(records)} sequences (seed={args.seed})")
 
     out_dir = base
     out_dir.mkdir(parents=True, exist_ok=True)
     out_fasta = out_dir / "sequences.fasta"
     write_fasta(records, out_fasta)
 
-    # optional labels.csv generation: try to parse header if it contains a label
-    # This is simplified; real scripts should consult dataset-specific parsers.
-
     size = out_fasta.stat().st_size
     if size > args.max_bytes:
         print(f"Output file size {size} exceeds max bytes {args.max_bytes}; aborting")
         raise SystemExit(2)
 
-    print(f"Wrote curated FASTA to {out_fasta} ({size} bytes)")
+    # Compute SHA256 for reproducibility
+    file_hash = sha256_of_file(out_fasta)
+
+    print(f"Wrote curated FASTA to {out_fasta}")
+    print(f"  Sequences: {len(records)}")
+    print(f"  Size: {size} bytes")
+    print(f"  SHA256: {file_hash}")
+    print()
+    print("Update METADATA.md with:")
+    print(f"  committed_sha256: {file_hash}")
+    print()
+    print("Reproducibility command:")
+    cmd_parts = [
+        f"python scripts/curate_and_subsample.py --dataset {args.dataset}",
+        f"--max-seqs {args.max_seqs}",
+        f"--seed {args.seed}",
+    ]
+    if args.seq_length != DEFAULT_SEQ_LENGTH:
+        cmd_parts.append(f"--seq-length {args.seq_length}")
+    if args.relaxed:
+        cmd_parts.append("--relaxed")
+    print("  " + " \\\n    ".join(cmd_parts))
     print("Done")
 
 
 if __name__ == "__main__":
     main()
-
