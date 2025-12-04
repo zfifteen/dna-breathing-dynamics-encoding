@@ -9,12 +9,14 @@ from typing import List, Dict, Tuple
 from pathlib import Path
 import random
 import collections
+import warnings
 
 try:
     from scipy import stats
     from scipy.signal import czt
 except ImportError as e:
-    print(f"Error: SciPy >=1.12 required: {e}", file=sys.stderr)
+    # signal.czt landed in SciPy 1.8.0; we pin higher (>=1.11.4) elsewhere for bug fixes
+    print(f"Error: SciPy >=1.11.4 required for signal.czt: {e}", file=sys.stderr)
     sys.exit(1)
 
 
@@ -197,7 +199,7 @@ def extract_features(freqs, spectrum, f0, band_width, guard_band=0.005):
     }
 
 
-def generate_dinuc_shuffles(seq, num_shuffles=10, seed=42):
+def generate_dinuc_shuffles(seq, num_shuffles=10, seed=42, max_retries=100, warn=True):
     """
     Generate dinucleotide-preserving shuffles using a randomized Eulerian path
     approach with rejection sampling. Efficient for short sequences (e.g., CRISPR).
@@ -215,8 +217,7 @@ def generate_dinuc_shuffles(seq, num_shuffles=10, seed=42):
     start_node = seq[0]
     shuffles = []
 
-    max_retries = 100
-
+    fallback_count = 0
     for _ in range(num_shuffles):
         for attempt in range(max_retries):
             # Deep copy edges to consume
@@ -240,6 +241,16 @@ def generate_dinuc_shuffles(seq, num_shuffles=10, seed=42):
         else:
             # Fallback if rejection sampling fails (rare for short seqs)
             shuffles.append(seq)
+            fallback_count += 1
+
+    if warn and fallback_count > 0:
+        warnings.warn(
+            (
+                f"Dinucleotide shuffle fallback to original sequence for "
+                f"{fallback_count}/{num_shuffles} attempts (max_retries={max_retries})."
+            ),
+            RuntimeWarning,
+        )
 
     return shuffles
 
@@ -253,6 +264,11 @@ def phase_scramble(spectrum, seed=42):
 
 def compute_stats(features_list, groups=None, num_bootstrap=500, num_perm=100, seed=42):
     np.random.seed(seed)
+
+    if groups is not None and len(groups) != len(features_list):
+        raise ValueError(
+            f"Group label count ({len(groups)}) must match number of sequences ({len(features_list)})."
+        )
 
     if groups is None or len(set(groups)) < 2:
         return {
@@ -318,7 +334,8 @@ def compute_stats(features_list, groups=None, num_bootstrap=500, num_perm=100, s
         mean1, mean2 = np.mean(group1), np.mean(group2)
         var1, var2 = np.var(group1, ddof=1), np.var(group2, ddof=1)
         pooled_std = np.sqrt((var1 + var2) / 2)
-        cohens_d = (mean1 - mean2) / pooled_std if pooled_std > 0 else 0.0
+        # If both groups have zero variance, Cohen's d is undefined; return NaN
+        cohens_d = (mean1 - mean2) / pooled_std if pooled_std > 0 else np.nan
 
         # Bootstrap CI
         def bootstrap_d(bs_samples):
@@ -329,9 +346,12 @@ def compute_stats(features_list, groups=None, num_bootstrap=500, num_perm=100, s
                 m1, m2 = np.mean(bs_g1), np.mean(bs_g2)
                 v1, v2 = np.var(bs_g1, ddof=1), np.var(bs_g2, ddof=1)
                 p_std = np.sqrt((v1 + v2) / 2)
-                d_val = (m1 - m2) / p_std if p_std > 0 else 0.0
+                d_val = (m1 - m2) / p_std if p_std > 0 else np.nan
                 bs_d.append(d_val)
-            return np.percentile(bs_d, [2.5, 97.5])
+            # If all bootstrap samples are undefined, propagate NaN CIs
+            if np.all(np.isnan(bs_d)):
+                return np.array([np.nan, np.nan])
+            return np.nanpercentile(bs_d, [2.5, 97.5])
 
         ci = bootstrap_d(num_bootstrap)
 
@@ -347,8 +367,8 @@ def compute_stats(features_list, groups=None, num_bootstrap=500, num_perm=100, s
                 p_g2 = all_data[n1:]
                 perm_diff = abs(np.mean(p_g1) - np.mean(p_g2))
                 perm_diffs.append(perm_diff)
-            p = np.mean([1 if diff >= obs_diff else 0 for diff in perm_diffs])
-            return p
+            hits = np.sum(np.array(perm_diffs) >= obs_diff)
+            return (hits + 1) / (perm_samples + 1)  # add-one smoothing to avoid p=0
 
         p_perm = perm_p(num_perm)
 
@@ -558,8 +578,8 @@ def main():
         with open(args.output, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
-            for f in features_list:
-                row = {k: v for k, v in f.items()}
+            for feat in features_list:
+                row = {k: v for k, v in feat.items()}
                 writer.writerow(row)
             stats_row = {"seq_id": "stats", "label": "stats", "seq_len": 0}
             stats_row.update(stats_dict)

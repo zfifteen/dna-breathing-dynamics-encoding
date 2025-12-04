@@ -3,11 +3,11 @@
 ## Quick Start (5 minutes)
 
 ```bash
-# 1. Ensure Python 3.12+
+# 1. Ensure Python 3.10+
 python --version
 
 # 2. Install dependencies (if not already installed)
-pip install numpy==1.26.4 scipy==1.16.1
+pip install numpy==1.26.4 scipy==1.11.4
 
 # 3. Run the experiment
 cd /path/to/wave-crispr-signal
@@ -36,7 +36,7 @@ cd wave-crispr-signal
 
 # Verify Python version
 python --version
-# Should output: Python 3.12.x or higher
+# Should output: Python 3.10.x or higher
 
 # Install dependencies from requirements.txt
 pip install -r requirements.txt
@@ -54,7 +54,7 @@ source venv-breathing/bin/activate  # On macOS/Linux
 venv-breathing\Scripts\activate  # On Windows
 
 # Install minimal dependencies
-pip install numpy==1.26.4 scipy==1.16.1
+pip install numpy==1.26.4 scipy==1.11.4
 
 # Clone repository (if needed)
 git clone https://github.com/your-org/wave-crispr-signal.git
@@ -221,7 +221,7 @@ pip install numpy==1.26.4 scipy==1.16.1
 ### Issue: Results Don't Match Expected Output
 
 **Possible causes**:
-1. **Different Python version**: Use Python 3.12.x
+1. **Different Python version**: Use Python 3.10.x or higher
 2. **Different numpy version**: Use numpy 1.26.4 exactly
 3. **Modified test script**: Re-download from repository
 4. **System differences**: Results may vary slightly across platforms (acceptable)

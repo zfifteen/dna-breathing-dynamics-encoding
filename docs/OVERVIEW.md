@@ -275,9 +275,9 @@ Expected: 34/34 pass
 ## Dependencies
 
 **Minimal**:
-- Python 3.12+
+- Python 3.10+
 - numpy 1.26.4
-- scipy 1.16.1
+- scipy 1.11.4+
 
 **Runtime**: ~30-60 seconds
 **Memory**: <500 MB
