@@ -188,7 +188,7 @@ def extract_features(
     f0: float = 1 / 10.5,
     band_width: float = 0.01,
     guard_band: float = 0.005,
-) -> Dict[str, float]:
+) -> Dict[str, Any]:
     """
     Extract spectral features from CZT spectrum.
 
@@ -282,7 +282,7 @@ def compute_hedges_g(group1: np.ndarray, group2: np.ndarray) -> float:
     correction = 1 - (3 / (4 * (n1 + n2) - 9))
     hedges_g = cohens_d * correction
 
-    return hedges_g
+    return float(hedges_g)
 
 
 def bootstrap_hedges_g_ci(
@@ -538,7 +538,8 @@ def run_validation_analysis(
     print(f"Loading sequences from: {data_path}")
 
     # Load and group sequences
-    sequences = load_sequences_from_fasta(data_path, params["max_sequences"])
+    max_seqs: int = params["max_sequences"]  # type: ignore[assignment]
+    sequences = load_sequences_from_fasta(data_path, max_seqs)
     if len(sequences) < 100:
         raise ValueError(
             f"Insufficient sequences: {len(sequences)} (need at least 100)"
@@ -546,9 +547,10 @@ def run_validation_analysis(
 
     print(f"Loaded {len(sequences)} valid sequences")
 
+    gc_threshold: float = params["gc_threshold"]  # type: ignore[assignment]
     high_gc, low_gc = group_by_gc_content(
         sequences,
-        threshold=params["gc_threshold"],
+        threshold=gc_threshold,
         seed=seed,
     )
 
@@ -580,10 +582,13 @@ def run_validation_analysis(
 
     # Key metrics to analyze
     metrics = ["peak_mag", "snr", "phase_coherence", "band_energy"]
-    results = {"metrics": {}}
+    results: Dict[str, Any] = {"metrics": {}}
 
-    raw_p_values = []
-    metric_results = []
+    raw_p_values: List[float] = []
+    metric_results: List[Dict[str, Any]] = []
+
+    n_bootstrap: int = params["n_bootstrap"]  # type: ignore[assignment]
+    confidence_level: float = params["confidence_level"]  # type: ignore[assignment]
 
     for metric in metrics:
         high_vals = np.array([f[metric] for f in high_gc_features])
@@ -593,8 +598,8 @@ def run_validation_analysis(
         g, ci_low, ci_high = bootstrap_hedges_g_ci(
             high_vals,
             low_vals,
-            n_bootstrap=params["n_bootstrap"],
-            confidence=params["confidence_level"],
+            n_bootstrap=n_bootstrap,
+            confidence=confidence_level,
             seed=seed,
         )
 

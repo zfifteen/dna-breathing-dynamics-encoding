@@ -1,6 +1,6 @@
 # DNA Breathing Dynamics Validation Statistics
 
-**Generated:** 2025-12-04T06:03:11.927037+00:00
+**Generated:** 2025-12-04T06:06:56.754436+00:00
 
 ## Executive Summary
 
@@ -57,7 +57,7 @@ max_sequences: 2000
 max_per_group: 500
 n_bootstrap: 500
 confidence_level: 0.950000
-analysis_timestamp: 2025-12-04T06:03:11.927037+00:00
+analysis_timestamp: 2025-12-04T06:06:56.754436+00:00
 ```
 
 ## Reproducibility
