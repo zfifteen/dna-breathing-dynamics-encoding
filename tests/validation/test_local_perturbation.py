@@ -211,7 +211,7 @@ def load_brunello_sequences(max_sequences: Optional[int] = None) -> List[Dict]:
     current_header = None
     current_seq = ""
 
-    with open(fasta_path, "r") as f:
+    with open(fasta_path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -381,8 +381,12 @@ def generate_brunello_mutant_pairs(
         )
 
     # Randomly sample sequences for diversity
+    # Allocate 2x the requested pairs to have fallbacks when sequences lack
+    # eligible bases for the required mutation direction (GC-decrease needs G/C,
+    # GC-increase needs A/T). This ratio is conservative given that most real
+    # DNA sequences contain both AT and GC bases.
     random.shuffle(brunello_seqs)
-    selected_seqs = brunello_seqs[:num_pairs * 2]  # Extra for fallbacks
+    selected_seqs = brunello_seqs[:num_pairs * 2]
 
     pairs = []
     seq_idx = 0
@@ -804,7 +808,7 @@ class TestMutationGeneration:
     def test_create_mutant_decreasing_gc(self) -> None:
         """Verify GC-decreasing mutation changes G/C to A/T."""
         wt = "GCGCGCGCGCGCGCGCGCGC"
-        random.seed(42)
+        random.seed(RNG_SEED)
         mut, pos, orig, new = create_gc_affecting_mutant(wt, direction="decrease")
         assert orig in "GC"
         assert new in "AT"
@@ -816,7 +820,7 @@ class TestMutationGeneration:
     def test_create_mutant_increasing_gc(self) -> None:
         """Verify GC-increasing mutation changes A/T to G/C."""
         wt = "ATATATATATATATATATATAT"[:20]
-        random.seed(42)
+        random.seed(RNG_SEED)
         mut, pos, orig, new = create_gc_affecting_mutant(wt, direction="increase")
         assert orig in "AT"
         assert new in "GC"
