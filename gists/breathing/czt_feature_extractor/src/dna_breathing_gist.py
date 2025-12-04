@@ -14,7 +14,8 @@ try:
     from scipy import stats
     from scipy.signal import czt
 except ImportError as e:
-    print(f"Error: SciPy >=1.12 required: {e}", file=sys.stderr)
+    # signal.czt landed in SciPy 1.8.0; we pin higher (>=1.11.4) elsewhere for bug fixes
+    print(f"Error: SciPy >=1.11.4 required for signal.czt: {e}", file=sys.stderr)
     sys.exit(1)
 
 
