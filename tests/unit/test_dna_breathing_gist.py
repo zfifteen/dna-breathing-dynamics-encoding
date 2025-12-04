@@ -110,3 +110,27 @@ class TestShuffleFallbackWarning:
                 seq, num_shuffles=2, seed=1, max_retries=0, warn=True
             )
         assert shuffles == [seq, seq]
+
+
+@pytest.mark.unit
+class TestPermutationPValue:
+    """Regression for permutation p-value smoothing (issue #26)."""
+
+    def test_permutation_p_has_add_one_smoothing(self) -> None:
+        # Construct two small deterministic groups with clear difference.
+        features = []
+        groups = []
+        for val in [0.0, 0.0, 0.0]:
+            features.append({"peak_mag": val, "snr": val, "phase_coherence": val})
+            groups.append("A")
+        for val in [1.0, 1.0, 1.0]:
+            features.append({"peak_mag": val, "snr": val, "phase_coherence": val})
+            groups.append("B")
+
+        num_perm = 10
+        stats = compute_stats(features, groups, num_bootstrap=10, num_perm=num_perm, seed=7)
+
+        expected_min = 1 / (num_perm + 1)
+        # With add-one smoothing, p must be bounded below by 1/(perm+1) instead of 0
+        assert stats["p_perm_peak_mag"] >= expected_min - 1e-12
+        assert 0.0 < stats["p_perm_peak_mag"] <= 1.0

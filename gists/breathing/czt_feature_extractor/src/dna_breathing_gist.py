@@ -362,8 +362,8 @@ def compute_stats(features_list, groups=None, num_bootstrap=500, num_perm=100, s
                 p_g2 = all_data[n1:]
                 perm_diff = abs(np.mean(p_g1) - np.mean(p_g2))
                 perm_diffs.append(perm_diff)
-            p = np.mean([1 if diff >= obs_diff else 0 for diff in perm_diffs])
-            return p
+            hits = np.sum(np.array(perm_diffs) >= obs_diff)
+            return (hits + 1) / (perm_samples + 1)  # add-one smoothing to avoid p=0
 
         p_perm = perm_p(num_perm)
 
