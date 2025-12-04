@@ -2,14 +2,18 @@
 # Catalog of curated datasets. Each entry contains metadata used by scripts and CI.
 
 # Example entry format:
-# - id: human_brulnello
+# - id: human_brunello
 #   name: Brunello sgRNA library (subset)
 #   species: Homo sapiens
 #   taxon_id: 9606
 #   path: data/human/brunello/
+#   sample_size: 1000
+#   filters:
+#     min_length: 20
+#     max_length: 20
+#     charset: ACGT
 #   committed_files:
 #     - sequences.fasta
-#     - labels.csv
 #   license: CC-BY-4.0
 #   source_url: https://www.addgene.org/
 #   source_doi: 10.1038/nbt.3437
@@ -21,9 +25,46 @@ datasets:
     species: Homo sapiens
     taxon_id: 9606
     path: data/human/brunello/
+    sample_size: 1000
+    filters:
+      min_length: 20
+      max_length: 20
+      charset: ACGT
     committed_files:
       - sequences.fasta
     license: "see source (Addgene / paper supplement)"
     source_url: https://media.addgene.org/files/Brunello_library_v1.1_sequences.txt.zip
     source_doi: 10.1038/nbt.3437
-    notes: "Seed subset created via curated sampling script; raw zip stored in data/raw/"
+    citation: "Doench et al. (2016) Nature Biotechnology"
+    notes: "Curated subsample of 1000 sgRNAs (seed=42); raw zip stored in data/raw/"
+
+  - id: seed_sample
+    name: Sample dataset for CI/tests
+    species: synthetic
+    path: data/seed/sample/
+    sample_size: 3
+    filters:
+      min_length: 20
+      max_length: 20
+      charset: ACGT
+    committed_files:
+      - sequences.fasta
+    license: MIT
+    source_url: local
+    notes: "Minimal example dataset for CI and testing"
+
+# Planned datasets (not yet curated):
+# - id: human_doench2016
+#   name: Doench 2016 guide-efficiency dataset
+#   source_doi: 10.1038/nbt.3437
+#   notes: "Supplemental Tables 2/3 with ~4,000 tested sgRNAs"
+#
+# - id: human_depmap_subsample
+#   name: DepMap-derived sample
+#   source_url: https://depmap.org/portal/download/all/
+#   license: CC-BY 4.0
+#
+# - id: mouse_gecko_v2
+#   name: GeCKO v2 mouse library
+#   source_url: https://www.addgene.org/pooled-libraries/geckov2/
+#   source_doi: 10.1016/j.cell.2014.09.029
