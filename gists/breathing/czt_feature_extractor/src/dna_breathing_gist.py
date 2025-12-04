@@ -203,6 +203,9 @@ def generate_dinuc_shuffles(seq, num_shuffles=10, seed=42, max_retries=100, warn
     """
     Generate dinucleotide-preserving shuffles using a randomized Eulerian path
     approach with rejection sampling. Efficient for short sequences (e.g., CRISPR).
+    
+    Raises:
+        ValueError: If the sequence's dinucleotide graph is non-Eulerian (corrupted input).
     """
     random.seed(seed)
     n = len(seq)
@@ -213,6 +216,39 @@ def generate_dinuc_shuffles(seq, num_shuffles=10, seed=42, max_retries=100, warn
     edges = collections.defaultdict(list)
     for i in range(n - 1):
         edges[seq[i]].append(seq[i + 1])
+
+    # Check Euler conditions: DNA sequences should always be Eulerian
+    # Non-Eulerian graphs indicate corrupted input (gaps, invalid characters, etc.)
+    in_degree = collections.defaultdict(int)
+    out_degree = collections.defaultdict(int)
+    
+    for i in range(n - 1):
+        out_degree[seq[i]] += 1
+        in_degree[seq[i + 1]] += 1
+    
+    all_bases = set(in_degree.keys()) | set(out_degree.keys())
+    imbalances = []
+    for base in all_bases:
+        in_d = in_degree.get(base, 0)
+        out_d = out_degree.get(base, 0)
+        if in_d != out_d:
+            imbalances.append((base, in_d, out_d, out_d - in_d))
+    
+    # Valid Eulerian path: 0 imbalances (circuit) or exactly 2 (start +1, end -1)
+    is_eulerian = len(imbalances) == 0 or (
+        len(imbalances) == 2 and sorted([imb[3] for imb in imbalances]) == [-1, 1]
+    )
+    
+    if not is_eulerian:
+        imbalance_desc = "; ".join(
+            [f"{base}: in={in_d}, out={out_d}, diff={diff:+d}" 
+             for base, in_d, out_d, diff in imbalances]
+        )
+        raise ValueError(
+            f"Non-Eulerian dinucleotide graph detected in sequence (length={n}). "
+            f"This indicates corrupted input (gaps, invalid characters, or concatenated sequences). "
+            f"Imbalances: {imbalance_desc}. Sequence cannot be shuffled while preserving dinucleotides."
+        )
 
     start_node = seq[0]
     shuffles = []
