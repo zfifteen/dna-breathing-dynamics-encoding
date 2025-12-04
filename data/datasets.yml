@@ -1,0 +1,21 @@
+datasets:
+  - name: human/brunello
+    source: broadgpp-brunello-library-contents.txt
+    sample_size: 1000
+    filters: 20nt ACGT only
+    columns: {gene: 0, sequence: 6}  # Gene Symbol col 0, Target Sequence col 6
+  - name: human/doench2016
+    source: https://portals.broadinstitute.org/gpp/public/media/cms/Doench2016.csv
+    sample_size: 1000
+    filters: 20nt ACGT only
+    columns: {gene: 'Gene', sequence: 'sgRNA Sequence'}
+  - name: human/depmap_subsample
+    source: dummy.csv
+    sample_size: 1000
+    filters: 20nt ACGT only
+    columns: {gene: 'Gene', sequence: 'Sequence'}
+  - name: mouse/gecko_v2
+    source: https://storage.googleapis.com/brain-genomics-public/research/crispr/geckov2_mouse_library.txt
+    sample_size: 1000
+    filters: 20nt ACGT only
+    columns: {gene: 0, sequence: 6}
