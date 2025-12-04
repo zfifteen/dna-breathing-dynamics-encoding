@@ -8,6 +8,10 @@ import random
 
 import pytest
 
+pytest.importorskip(
+    "pytest_benchmark", reason="pytest-benchmark plugin is optional for performance tests"
+)
+
 from src.core.params import validate_dna_sequence
 
 

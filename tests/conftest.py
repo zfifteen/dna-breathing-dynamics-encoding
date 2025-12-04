@@ -78,6 +78,7 @@ def pytest_configure(config):
         "smoke: Quick smoke tests (<5s)",
         "slow: Slow tests (>5s)",
         "apple_silicon: Tests requiring Apple Silicon hardware",
+        "benchmark: Performance benchmark tests",
     ]
     for marker in markers:
         config.addinivalue_line("markers", marker)
