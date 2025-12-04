@@ -573,8 +573,8 @@ def main():
         with open(args.output, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
-            for f in features_list:
-                row = {k: v for k, v in f.items()}
+            for feat in features_list:
+                row = {k: v for k, v in feat.items()}
                 writer.writerow(row)
             stats_row = {"seq_id": "stats", "label": "stats", "seq_len": 0}
             stats_row.update(stats_dict)
