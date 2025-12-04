@@ -77,3 +77,6 @@ benchmark.json
 *.log
 
 .snapshots/
+
+# Generated experiment artifacts
+artifacts/
