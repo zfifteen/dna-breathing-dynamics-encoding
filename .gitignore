@@ -78,5 +78,9 @@ benchmark.json
 
 .snapshots/
 
-# Generated experiment artifacts
-artifacts/
+# Generated experiment artifacts (except reports)
+artifacts/**/*.csv
+artifacts/**/config.json
+!artifacts/**/*.md
+!artifacts/**/DETAILED_FINDINGS.md
+!artifacts/**/report.md
