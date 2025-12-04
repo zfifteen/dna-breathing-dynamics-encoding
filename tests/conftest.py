@@ -6,11 +6,47 @@ for the entire test suite.
 """
 
 import random
+from pathlib import Path
 from typing import Generator
 
 import numpy as np
 import pytest
 from mpmath import mp
+
+
+def pytest_load_initial_conftests(early_config, parser, args):
+    """
+    Keep default addopts usable even when pytest-cov isn't installed.
+
+    The project-level addopts include coverage flags; stripping them here
+    prevents failures that force callers to bypass config with -c /dev/null,
+    which in turn avoids marker and cache-dir warnings.
+    """
+    try:
+        import pytest_cov  # type: ignore  # noqa: F401
+    except ImportError:
+        cov_flags = {"--cov=src", "--cov-report=term-missing", "--cov-report=html"}
+        args[:] = [arg for arg in args if arg not in cov_flags]
+
+
+def pytest_addoption(parser):
+    """
+    Define no-op coverage options so pytest doesn't error when pytest-cov
+    is absent. If pytest-cov is installed it will override these options.
+    """
+    parser.addoption(
+        "--cov",
+        action="append",
+        default=[],
+        help="Dummy coverage option; real behavior comes from pytest-cov if installed.",
+    )
+    parser.addoption(
+        "--cov-report",
+        action="append",
+        default=[],
+        help="Dummy coverage option; real behavior comes from pytest-cov if installed.",
+    )
+
 
 from src.core.params import (
     BREATHING_FREQUENCY_DEFAULT,
@@ -30,6 +66,32 @@ def set_random_seeds() -> None:
 def configure_mpmath() -> None:
     """Configure mpmath precision for all tests."""
     mp.dps = DEFAULT_MPMATH_DPS
+
+
+def pytest_configure(config):
+    """Register markers explicitly for environments that skip pyproject parsing."""
+    markers = [
+        "unit: Unit tests",
+        "integration: Integration tests",
+        "performance: Performance benchmark tests",
+        "validation: Scientific validation tests",
+        "smoke: Quick smoke tests (<5s)",
+        "slow: Slow tests (>5s)",
+        "apple_silicon: Tests requiring Apple Silicon hardware",
+    ]
+    for marker in markers:
+        config.addinivalue_line("markers", marker)
+
+    # If config rootdir is forced to /dev (e.g., via -c /dev/null), redirect
+    # pytest's cache to a writable path inside the repository to avoid warnings.
+    if str(config.rootpath) == "/dev":
+        repo_root = Path(__file__).resolve().parents[1]
+        cache_dir = repo_root / ".pytest_cache"
+        cache_dir.mkdir(exist_ok=True)
+        # Update both option and cache object so cacheprovider writes inside repo
+        config.option.cache_dir = str(cache_dir)
+        if hasattr(config, "cache"):
+            config.cache._cachedir = cache_dir
 
 
 @pytest.fixture

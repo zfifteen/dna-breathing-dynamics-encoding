@@ -5,6 +5,7 @@ Tests that the ΔG° normalization uses dynamically computed bounds from
 the NEAREST_NEIGHBOR_DG dictionary instead of hardcoded values.
 """
 
+import math
 import sys
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from dna_breathing_gist import (
     _DG_MIN,
     _DG_MAX,
     encode_sequence,
+    compute_stats,
 )
 
 
@@ -65,3 +67,32 @@ class TestDynamicDGBounds:
             # (may slightly exceed due to fallback values or edge effects)
             assert val.imag >= -0.5  # Allow some tolerance
             assert val.imag <= 1.5  # Allow some tolerance
+
+
+@pytest.mark.unit
+class TestCohensDZeroVariance:
+    """Regression test for issue #20: avoid masking division-by-zero in Cohen's d."""
+
+    def test_zero_variance_groups_yield_nan_effect_size(self) -> None:
+        """If both groups are constant, Cohen's d and its CI should be NaN."""
+        features = []
+        groups = []
+
+        for _ in range(4):
+            features.append(
+                {"peak_mag": 1.0, "snr": 0.5, "phase_coherence": 0.2}
+            )
+            groups.append("A")
+
+        for _ in range(5):
+            features.append(
+                {"peak_mag": 3.0, "snr": 0.5, "phase_coherence": 0.2}
+            )
+            groups.append("B")
+
+        stats = compute_stats(features, groups, num_bootstrap=10, num_perm=10, seed=123)
+
+        assert math.isnan(stats["cohens_d_peak_mag"])
+        assert math.isnan(stats["ci_low_peak_mag"])
+        assert math.isnan(stats["ci_high_peak_mag"])
+        assert 0.0 <= stats["p_perm_peak_mag"] <= 1.0

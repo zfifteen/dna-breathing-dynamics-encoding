@@ -318,7 +318,8 @@ def compute_stats(features_list, groups=None, num_bootstrap=500, num_perm=100, s
         mean1, mean2 = np.mean(group1), np.mean(group2)
         var1, var2 = np.var(group1, ddof=1), np.var(group2, ddof=1)
         pooled_std = np.sqrt((var1 + var2) / 2)
-        cohens_d = (mean1 - mean2) / pooled_std if pooled_std > 0 else 0.0
+        # If both groups have zero variance, Cohen's d is undefined; return NaN
+        cohens_d = (mean1 - mean2) / pooled_std if pooled_std > 0 else np.nan
 
         # Bootstrap CI
         def bootstrap_d(bs_samples):
@@ -329,9 +330,12 @@ def compute_stats(features_list, groups=None, num_bootstrap=500, num_perm=100, s
                 m1, m2 = np.mean(bs_g1), np.mean(bs_g2)
                 v1, v2 = np.var(bs_g1, ddof=1), np.var(bs_g2, ddof=1)
                 p_std = np.sqrt((v1 + v2) / 2)
-                d_val = (m1 - m2) / p_std if p_std > 0 else 0.0
+                d_val = (m1 - m2) / p_std if p_std > 0 else np.nan
                 bs_d.append(d_val)
-            return np.percentile(bs_d, [2.5, 97.5])
+            # If all bootstrap samples are undefined, propagate NaN CIs
+            if np.all(np.isnan(bs_d)):
+                return np.array([np.nan, np.nan])
+            return np.nanpercentile(bs_d, [2.5, 97.5])
 
         ci = bootstrap_d(num_bootstrap)
 
