@@ -227,7 +227,7 @@ python --version  # Should be >= 3.12
 
 # Required packages (exact versions)
 pip install numpy==1.26.4
-pip install scipy==1.16.1
+pip install scipy==1.11.4
 ```
 
 ### Running the Experiment

@@ -141,7 +141,7 @@ python experiments/test_breathing_dynamics_encoding.py > my_output.txt 2>&1
 **Minimal**:
 - Python 3.10+
 - numpy 1.26.4
-- scipy 1.16.1
+- scipy 1.11.4
 
 **Full repository**: See `requirements.txt`
 
