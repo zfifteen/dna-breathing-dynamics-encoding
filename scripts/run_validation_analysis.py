@@ -17,6 +17,7 @@ Outputs:
 Reference: Issue #48 - Revised Test Plan for DNA Breathing Dynamics Analysis
 """
 
+# Standard library imports
 import csv
 import random
 import sys
@@ -25,6 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+# Third-party imports
 import numpy as np
 from Bio import SeqIO
 from scipy import stats
@@ -33,6 +35,9 @@ from scipy.signal import czt
 # =============================================================================
 # Constants and Parameters
 # =============================================================================
+
+# CRISPR guide RNA sequence length (standard for Cas9)
+CRISPR_GUIDE_LENGTH = 20
 
 # SantaLucia 1998 Unified nearest-neighbor parameters (kcal/mol)
 NEAREST_NEIGHBOR_DG = {
@@ -54,9 +59,18 @@ NEAREST_NEIGHBOR_DG = {
     "CC": -1.84,
 }
 
-# Derive DG bounds for normalization
-_DG_MIN = min(NEAREST_NEIGHBOR_DG.values())  # Most stable (most negative)
-_DG_MAX = max(NEAREST_NEIGHBOR_DG.values())  # Least stable
+# Thermodynamic constants derived from nearest-neighbor table
+DG_MIN = min(NEAREST_NEIGHBOR_DG.values())  # Most stable (most negative)
+DG_MAX = max(NEAREST_NEIGHBOR_DG.values())  # Least stable
+
+# Default ΔG value for unpaired/terminal bases (neutral, near mean of NN values)
+DEFAULT_DG_VALUE = -1.5
+
+# Default noise floor for SNR calculations when no off-band data available
+DEFAULT_NOISE_FLOOR = 1.0
+
+# Minimum bootstrap samples for valid confidence interval estimation
+MIN_BOOTSTRAP_SAMPLES = 50
 
 
 # =============================================================================
@@ -116,12 +130,12 @@ def encode_sequence(
         # Imaginary part: thermodynamic stability from dinucleotide
         if i < n - 1:
             dinuc = seq[i : i + 2]
-            dg = NEAREST_NEIGHBOR_DG.get(dinuc, -1.5)
+            dg = NEAREST_NEIGHBOR_DG.get(dinuc, DEFAULT_DG_VALUE)
         else:
-            dg = -1.5  # Neutral for last base
+            dg = DEFAULT_DG_VALUE  # Neutral for last base
 
         # Normalize DG to 0..1 range
-        norm_imag = (dg - _DG_MIN) / (_DG_MAX - _DG_MIN)
+        norm_imag = (dg - DG_MIN) / (DG_MAX - DG_MIN)
         complex_signal[i] = complex(real_part, norm_imag)
 
     if apply_helical:
@@ -211,7 +225,9 @@ def extract_features(
     edge_high = f0 + band_width + guard_band
     off_mask = (freqs < edge_low) | (freqs > edge_high)
     skirt_mags = mags[off_mask]
-    skirt_mean = float(np.mean(skirt_mags)) if len(skirt_mags) > 0 else 1.0
+    skirt_mean = (
+        float(np.mean(skirt_mags)) if len(skirt_mags) > 0 else DEFAULT_NOISE_FLOOR
+    )
 
     # Feature calculations
     peak_to_skirt = peak_mag / skirt_mean if skirt_mean > 0 else float("inf")
@@ -303,7 +319,7 @@ def bootstrap_hedges_g_ci(
         if not np.isnan(bs_g):
             bootstrap_gs.append(bs_g)
 
-    if len(bootstrap_gs) < n_bootstrap // 2:
+    if len(bootstrap_gs) < MIN_BOOTSTRAP_SAMPLES:
         return hedges_g, np.nan, np.nan
 
     alpha = 1 - confidence
@@ -380,8 +396,8 @@ def load_sequences_from_fasta(fasta_path: str, max_sequences: int = 2000) -> Lis
     sequences = []
     for record in SeqIO.parse(fasta_path, "fasta"):
         seq = str(record.seq).upper()
-        # Validate sequence (20nt, ACGT only)
-        if len(seq) == 20 and all(b in "ACGT" for b in seq):
+        # Validate sequence (CRISPR guide length, ACGT only)
+        if len(seq) == CRISPR_GUIDE_LENGTH and all(b in "ACGT" for b in seq):
             sequences.append(seq)
             if len(sequences) >= max_sequences:
                 break
@@ -413,7 +429,6 @@ def group_by_gc_content(
     min_size = min(len(high_gc), len(low_gc))
     if min_size < 100:
         warnings.warn(f"Small group size: high_gc={len(high_gc)}, low_gc={len(low_gc)}")
-        min_size = min(min_size, 500)
 
     # Subsample to equal sizes (max 500 per group as per issue spec)
     target_size = min(min_size, 500)
@@ -464,7 +479,7 @@ def process_sequence(seq: str, params: Dict[str, Any]) -> Dict[str, Any]:
         features["sequence"] = seq
         features["gc_content"] = compute_gc_content(seq)
         return features
-    except Exception as e:
+    except (ValueError, IndexError, KeyError) as e:
         return {"error": str(e), "sequence": seq}
 
 
@@ -799,6 +814,6 @@ if __name__ == "__main__":
         print(f"Wilcoxon p-value (FDR): {p:.4e}")
         print(f"Total sequences analyzed: {summary['total_sequences']}")
         print("=" * 60)
-    except Exception as e:
+    except (ValueError, FileNotFoundError, IOError) as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
