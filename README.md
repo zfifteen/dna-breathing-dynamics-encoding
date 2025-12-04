@@ -76,6 +76,7 @@ dna_breathing_dynamics_encoding/
 ### Bioinformatics
 
 - DNA/RNA sequence validation with nucleotide checking
+- Graph-theoretic validation for dinucleotide-preserving shuffles (Eulerian path analysis)
 - GC content analysis
 - Sequence property calculations
 - Strict validation following human genome standards (GRCh38/hg38)

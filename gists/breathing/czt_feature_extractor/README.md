@@ -48,4 +48,14 @@ For large tests, place inputs in data/processed/, outputs in results/scenarios/[
 
 **Testing Policy**: See TESTING_GUIDELINES.md – real data only, no synthetic. All tests must validate AC1–AC6.
 
+## Methodology
+
+### Dinucleotide Shuffling Strategy
+To preserve the thermodynamic stability profile of DNA sequences (driven largely by nearest-neighbor interactions), this tool uses a **graph-theoretic approach** for shuffling:
+
+1.  **Eulerian Path Analysis**: The sequence is modeled as a directed multigraph where nodes are nucleotides and edges are transitions.
+2.  **Strict Validation**: Before shuffling, the graph is checked for **Eulerian conditions** (balanced in/out degrees).
+    *   **Behavior Change**: Non-Eulerian inputs (often caused by gaps or invalid characters) now **raise a `ValueError`** with detailed imbalance reports. They do *not* fallback to mononucleotide shuffles or original sequences, preventing statistical artifacts in spectral baselines.
+3.  **Reproducibility**: Valid shuffles are generated deterministically using the provided `--seed`.
+
 Original docstrings/details unchanged.
