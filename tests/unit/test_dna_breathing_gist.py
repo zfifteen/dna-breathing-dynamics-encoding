@@ -150,3 +150,35 @@ class TestGroupLengthMismatch:
 
         with pytest.raises(ValueError):
             compute_stats(features, groups, num_bootstrap=5, num_perm=5, seed=0)
+
+
+@pytest.mark.unit
+class TestEulerConditionValidation:
+    """Test Euler condition checking for dinucleotide shuffles (issue #14)."""
+
+    def test_normal_sequences_are_eulerian(self) -> None:
+        """Normal DNA sequences should always pass Euler validation."""
+        sequences = [
+            "ATGCTAGCTAGCTAGCTACG",  # Random 20bp
+            "GTTGCCCCACAGGGCAGTAA",  # Real gRNA
+            "ATAATATATAATATATATAT",  # AT-rich
+            "GCGCGCGCGCGCGCGCGCGC",  # GC-rich
+            "AAA",  # Homopolymer
+        ]
+        for seq in sequences:
+            shuffles = generate_dinuc_shuffles(seq, num_shuffles=5, seed=42, warn=False)
+            assert len(shuffles) == 5
+            # Verify dinucleotide preservation
+            from collections import Counter
+            if len(seq) >= 2:
+                orig_dinucs = Counter([seq[i:i+2] for i in range(len(seq)-1)])
+                for shuffle in shuffles:
+                    shuf_dinucs = Counter([shuffle[i:i+2] for i in range(len(shuffle)-1)])
+                    assert orig_dinucs == shuf_dinucs, f"Dinucleotides not preserved: {seq} → {shuffle}"
+
+    def test_edge_cases_succeed(self) -> None:
+        """Single base and very short sequences should work."""
+        edge_cases = ["A", "AT", "ATG"]
+        for seq in edge_cases:
+            shuffles = generate_dinuc_shuffles(seq, num_shuffles=3, seed=42, warn=False)
+            assert len(shuffles) == 3
