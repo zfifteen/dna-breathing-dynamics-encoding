@@ -56,6 +56,10 @@ BAND_WIDTH = 0.01  # CZT analysis bandwidth
 ALPHA = 0.001  # Significance threshold after FDR correction
 EFFECT_SIZE_THRESHOLD = 4.0  # Large effect size threshold per test plan
 
+# Sequence generation retry limits
+MAX_SEQUENCE_RETRIES = 100  # Max attempts to generate valid wild-type sequence
+SEED_MULTIPLIER = 1000  # Seed offset multiplier for retry iterations
+
 # GC-affecting mutation mappings
 GC_DECREASING = {"G": ["A", "T"], "C": ["A", "T"]}  # G/C → A/T
 GC_INCREASING = {"A": ["G", "C"], "T": ["G", "C"]}  # A/T → G/C
@@ -156,8 +160,10 @@ def generate_wild_type_mutant_pairs(
         # Generate wild-type sequence
         # Ensure we have bases that can be mutated in the chosen direction
         attempts = 0
-        while attempts < 100:
-            wt_seq = generate_random_guide(GUIDE_LENGTH, seed=seed + i + attempts * 1000)
+        while attempts < MAX_SEQUENCE_RETRIES:
+            wt_seq = generate_random_guide(
+                GUIDE_LENGTH, seed=seed + i + attempts * SEED_MULTIPLIER
+            )
             target_bases = "GC" if direction == "decrease" else "AT"
             if any(b in target_bases for b in wt_seq):
                 break
@@ -256,7 +262,8 @@ def cohens_d_paired(diffs: np.ndarray) -> float:
     """
     mean_diff = np.mean(diffs)
     std_diff = np.std(diffs, ddof=1)
-    if std_diff == 0:
+    # Use tolerance for floating-point comparison to avoid division by near-zero
+    if std_diff < np.finfo(float).eps:
         return np.nan
     return mean_diff / std_diff
 
