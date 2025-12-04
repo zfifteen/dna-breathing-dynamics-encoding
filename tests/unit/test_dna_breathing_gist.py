@@ -21,6 +21,7 @@ from dna_breathing_gist import (
     _DG_MAX,
     encode_sequence,
     compute_stats,
+    generate_dinuc_shuffles,
 )
 
 
@@ -96,3 +97,16 @@ class TestCohensDZeroVariance:
         assert math.isnan(stats["ci_low_peak_mag"])
         assert math.isnan(stats["ci_high_peak_mag"])
         assert 0.0 <= stats["p_perm_peak_mag"] <= 1.0
+
+
+@pytest.mark.unit
+class TestShuffleFallbackWarning:
+    """Ensure shuffling failure path emits a warning (issue #23)."""
+
+    def test_shuffle_fallback_warns_and_returns_original(self) -> None:
+        seq = "AAAA"  # Graph with single node; force failure via zero retries
+        with pytest.warns(RuntimeWarning):
+            shuffles = generate_dinuc_shuffles(
+                seq, num_shuffles=2, seed=1, max_retries=0, warn=True
+            )
+        assert shuffles == [seq, seq]

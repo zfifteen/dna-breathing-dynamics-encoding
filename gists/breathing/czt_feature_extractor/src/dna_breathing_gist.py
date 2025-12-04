@@ -9,6 +9,7 @@ from typing import List, Dict, Tuple
 from pathlib import Path
 import random
 import collections
+import warnings
 
 try:
     from scipy import stats
@@ -198,7 +199,7 @@ def extract_features(freqs, spectrum, f0, band_width, guard_band=0.005):
     }
 
 
-def generate_dinuc_shuffles(seq, num_shuffles=10, seed=42):
+def generate_dinuc_shuffles(seq, num_shuffles=10, seed=42, max_retries=100, warn=True):
     """
     Generate dinucleotide-preserving shuffles using a randomized Eulerian path
     approach with rejection sampling. Efficient for short sequences (e.g., CRISPR).
@@ -216,8 +217,7 @@ def generate_dinuc_shuffles(seq, num_shuffles=10, seed=42):
     start_node = seq[0]
     shuffles = []
 
-    max_retries = 100
-
+    fallback_count = 0
     for _ in range(num_shuffles):
         for attempt in range(max_retries):
             # Deep copy edges to consume
@@ -241,6 +241,16 @@ def generate_dinuc_shuffles(seq, num_shuffles=10, seed=42):
         else:
             # Fallback if rejection sampling fails (rare for short seqs)
             shuffles.append(seq)
+            fallback_count += 1
+
+    if warn and fallback_count > 0:
+        warnings.warn(
+            (
+                f"Dinucleotide shuffle fallback to original sequence for "
+                f"{fallback_count}/{num_shuffles} attempts (max_retries={max_retries})."
+            ),
+            RuntimeWarning,
+        )
 
     return shuffles
 
