@@ -3,7 +3,7 @@
 ## Quick Start (5 minutes)
 
 ```bash
-# 1. Ensure Python 3.12+
+# 1. Ensure Python 3.10+
 python --version
 
 # 2. Install dependencies (if not already installed)
@@ -36,7 +36,7 @@ cd wave-crispr-signal
 
 # Verify Python version
 python --version
-# Should output: Python 3.12.x or higher
+# Should output: Python 3.10.x or higher
 
 # Install dependencies from requirements.txt
 pip install -r requirements.txt
@@ -221,7 +221,7 @@ pip install numpy==1.26.4 scipy==1.16.1
 ### Issue: Results Don't Match Expected Output
 
 **Possible causes**:
-1. **Different Python version**: Use Python 3.12.x
+1. **Different Python version**: Use Python 3.10.x or higher
 2. **Different numpy version**: Use numpy 1.26.4 exactly
 3. **Modified test script**: Re-download from repository
 4. **System differences**: Results may vary slightly across platforms (acceptable)

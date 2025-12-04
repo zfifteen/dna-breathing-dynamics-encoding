@@ -222,7 +222,7 @@ Other frequency-native properties to test:
 ### Prerequisites
 
 ```bash
-# Python 3.12+
+# Python 3.10+
 python --version  # Should be >= 3.12
 
 # Required packages (exact versions)
