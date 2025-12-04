@@ -265,6 +265,11 @@ def phase_scramble(spectrum, seed=42):
 def compute_stats(features_list, groups=None, num_bootstrap=500, num_perm=100, seed=42):
     np.random.seed(seed)
 
+    if groups is not None and len(groups) != len(features_list):
+        raise ValueError(
+            f"Group label count ({len(groups)}) must match number of sequences ({len(features_list)})."
+        )
+
     if groups is None or len(set(groups)) < 2:
         return {
             "cohens_d_peak_mag": 0.0,

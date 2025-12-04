@@ -134,3 +134,19 @@ class TestPermutationPValue:
         # With add-one smoothing, p must be bounded below by 1/(perm+1) instead of 0
         assert stats["p_perm_peak_mag"] >= expected_min - 1e-12
         assert 0.0 < stats["p_perm_peak_mag"] <= 1.0
+
+
+@pytest.mark.unit
+class TestGroupLengthMismatch:
+    """Regression for issue #15: reject mismatched group labels instead of truncating."""
+
+    def test_group_count_mismatch_raises(self) -> None:
+        features = [
+            {"peak_mag": 1.0, "snr": 1.0, "phase_coherence": 1.0},
+            {"peak_mag": 2.0, "snr": 2.0, "phase_coherence": 2.0},
+            {"peak_mag": 3.0, "snr": 3.0, "phase_coherence": 3.0},
+        ]
+        groups = ["A", "B"]  # length mismatch
+
+        with pytest.raises(ValueError):
+            compute_stats(features, groups, num_bootstrap=5, num_perm=5, seed=0)
