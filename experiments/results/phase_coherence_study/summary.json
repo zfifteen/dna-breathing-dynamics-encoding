@@ -1,0 +1,78 @@
+{
+  "study_design": {
+    "n_samples": 1000,
+    "n_folds": 5,
+    "n_repeats": 5,
+    "band_center": 0.09523809523809523,
+    "band_width": 0.01,
+    "seeds": {
+      "global": 137,
+      "phase": 271828,
+      "cv": 161803
+    }
+  },
+  "statistics": {
+    "auroc": {
+      "mean_delta": 0.0024719999999999855,
+      "std_delta": 0.02300785228278959,
+      "n_folds": 25,
+      "t_statistic": 0.5372078996371815,
+      "t_pvalue": 0.5960700841613141,
+      "wilcoxon_statistic": 147.0,
+      "wilcoxon_pvalue": 0.6915188431739807,
+      "cohens_d": 0.1074415799274363,
+      "cohens_d_ci_low": -0.3120031129801399,
+      "cohens_d_ci_high": 0.4876742115485317,
+      "effect_interpretation": "negligible"
+    },
+    "auprc": {
+      "mean_delta": 0.009716133974371157,
+      "std_delta": 0.030018518177089358,
+      "n_folds": 25,
+      "t_statistic": 1.6183566951993447,
+      "t_pvalue": 0.11865432362403167,
+      "wilcoxon_statistic": 100.0,
+      "wilcoxon_pvalue": 0.09573346376419067,
+      "cohens_d": 0.3236713390398689,
+      "cohens_d_ci_low": -0.09465941621493816,
+      "cohens_d_ci_high": 0.8516803392008272,
+      "effect_interpretation": "small"
+    },
+    "brier": {
+      "mean_delta": 0.0008326769803552592,
+      "std_delta": 0.00386971808687035,
+      "n_folds": 25,
+      "t_statistic": 1.0758884260593384,
+      "t_pvalue": 0.29267427274965024,
+      "wilcoxon_statistic": 127.0,
+      "wilcoxon_pvalue": 0.3525196313858032,
+      "cohens_d": 0.21517768521186773,
+      "cohens_d_ci_low": -0.1990078043392308,
+      "cohens_d_ci_high": 0.6562244067369549,
+      "effect_interpretation": "small"
+    }
+  },
+  "power_analysis": {
+    "n_observations": 25,
+    "observed_delta": 0.0024719999999999855,
+    "observed_std": 0.02300785228278959,
+    "observed_effect_size": 0.1074415799274363,
+    "achieved_power": 0.08102097017430673,
+    "desired_power": 0.8,
+    "alpha": 0.05,
+    "n_needed_for_desired_power": 680
+  },
+  "ablation": {
+    "phase_only_auroc_mean": 0.54174,
+    "phase_only_auroc_std": 0.032803329099346,
+    "magnitude_only_auroc_mean": 0.60108,
+    "magnitude_only_auroc_std": 0.028367685841464044
+  },
+  "permutation_test": {
+    "observed_delta_auroc": 0.013180000000000015,
+    "permutation_mean": -0.0012212000000000024,
+    "permutation_std": 0.023407011602509197,
+    "permutation_pvalue": 0.2634730538922156,
+    "n_permutations": 500
+  }
+}
