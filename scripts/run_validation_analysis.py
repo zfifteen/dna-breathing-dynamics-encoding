@@ -14,7 +14,7 @@ Outputs:
     - features.csv: Per-sequence spectral features
     - reports/validation_stats.md: Summary statistics report
 
-Reference: Issue #48 - Revised Test Plan for DNA Breathing Dynamics Analysis
+Reference: Issue #44 - Revised Test Plan for DNA Breathing Dynamics Analysis
 """
 
 # Standard library imports
@@ -88,23 +88,23 @@ def compute_gc_content(seq: str) -> float:
 def encode_sequence(
     seq: str,
     at_lifetime: float = 1.0,
-    gc_lifetime: float = 0.02,
+    gc_lifetime: float = 50.0,
     helical_period: float = 10.5,
     apply_helical: bool = True,
 ) -> np.ndarray:
     """
     Encode DNA sequence as complex-valued signal for spectral analysis.
 
-    Real part: Breathing kinetics (opening rates)
-        AT pairs: ~1 ms lifetime (faster opening)
-        GC pairs: ~0.02 ms (50x slower, 3 H-bonds)
+    Real part: Breathing kinetics (base pair lifetimes)
+        AT pairs: ~1 ms lifetime (faster opening, 2 H-bonds)
+        GC pairs: ~50 ms lifetime (slower opening, 3 H-bonds)
 
     Imaginary part: Thermodynamic stability (ΔG from nearest-neighbor model)
 
     Args:
         seq: DNA sequence (uppercase ACGT)
-        at_lifetime: AT pair opening rate (ms⁻¹)
-        gc_lifetime: GC pair opening rate (ms⁻¹)
+        at_lifetime: AT pair opening lifetime (ms)
+        gc_lifetime: GC pair opening lifetime (ms)
         helical_period: B-form DNA period (10.5 bp)
         apply_helical: Apply helical phase modulation
 
@@ -154,25 +154,31 @@ def czt_analysis(
     signal: np.ndarray,
     f0: float = 1 / 10.5,
     band_width: float = 0.01,
+    noise_band_width: float = 0.03,
     M: int = 256,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute Chirp Z-Transform focused on helical frequency.
 
+    Computes a wider frequency band than the analysis band to allow
+    proper noise floor estimation from off-band frequencies.
+
     Args:
         signal: Complex-valued input signal
         f0: Center frequency (1/10.5 bp⁻¹ for helical period)
-        band_width: Frequency band width around f0
+        band_width: Frequency band width around f0 for signal analysis
+        noise_band_width: Extended band for noise floor estimation
         M: Number of frequency points
 
     Returns:
         Tuple of (frequencies, spectrum)
     """
     fs = 1.0  # Sampling frequency (1 sample per base)
-    f_low = f0 - band_width
-    f_high = f0 + band_width
+    # Compute wider band to capture noise floor
+    f_low = f0 - noise_band_width
+    f_high = f0 + noise_band_width
 
-    # CZT spiral parameters
+    # CZT spiral parameters (matching scipy.signal.czt conventions)
     a = np.exp(-2j * np.pi * f_low / fs)
     w = np.exp(2j * np.pi * (f_high - f_low) / (M * fs))
 
@@ -221,20 +227,32 @@ def extract_features(
     peak_phase = float(band_phases[peak_local_idx])
 
     # Skirt estimation (off-band noise floor)
+    # Use frequencies outside the signal band but within the computed spectrum
     edge_low = f0 - band_width - guard_band
     edge_high = f0 + band_width + guard_band
     off_mask = (freqs < edge_low) | (freqs > edge_high)
     skirt_mags = mags[off_mask]
-    skirt_mean = (
-        float(np.mean(skirt_mags)) if len(skirt_mags) > 0 else DEFAULT_NOISE_FLOOR
-    )
 
-    # Feature calculations
-    peak_to_skirt = peak_mag / skirt_mean if skirt_mean > 0 else float("inf")
-    coherence = float(np.abs(np.mean(np.exp(1j * band_phases))))
-    band_energy = float(np.sum(band_mags**2))
+    # Compute noise floor from off-band frequencies
+    if len(skirt_mags) > 0:
+        skirt_mean = float(np.mean(skirt_mags))
+    else:
+        # Fallback if no off-band data (should not happen with wider CZT)
+        skirt_mean = DEFAULT_NOISE_FLOOR
+
+    # Feature calculations with finite value guarantees
     band_mean = float(np.mean(band_mags))
-    snr = band_mean / skirt_mean if skirt_mean > 0 else float("inf")
+    band_energy = float(np.sum(band_mags**2))
+    coherence = float(np.abs(np.mean(np.exp(1j * band_phases))))
+
+    # Use large but finite values instead of infinity for ratios
+    max_ratio = 1e6  # Large but finite upper bound
+    if skirt_mean > 0:
+        peak_to_skirt = min(peak_mag / skirt_mean, max_ratio)
+        snr = min(band_mean / skirt_mean, max_ratio)
+    else:
+        peak_to_skirt = max_ratio
+        snr = max_ratio
 
     return {
         "peak_mag": peak_mag,
@@ -468,6 +486,7 @@ def process_sequence(seq: str, params: Dict[str, Any]) -> Dict[str, Any]:
             signal,
             f0=params["target_frequency"],
             band_width=params["band_width"],
+            noise_band_width=params.get("noise_band_width", 0.03),
             M=params["czt_points"],
         )
         features = extract_features(
@@ -520,12 +539,13 @@ def run_validation_analysis(
         "seed": seed,
         "temperature_k": 310.15,  # 37°C physiological
         "na_concentration_m": 1.0,  # 1M Na⁺
-        "at_lifetime": 1.0,  # ms (fast opening)
-        "gc_lifetime": 0.02,  # ms (50x slower)
+        "at_lifetime": 1.0,  # ms (faster opening, 2 H-bonds)
+        "gc_lifetime": 50.0,  # ms (slower opening, 3 H-bonds)
         "helical_period": 10.5,  # B-form DNA
         "apply_helical": True,
         "target_frequency": 1.0 / 10.5,  # bp⁻¹
         "band_width": 0.01,
+        "noise_band_width": 0.03,  # Extended band for noise estimation
         "czt_points": 256,
         "gc_threshold": 0.5,  # 50%
         "max_sequences": 2000,
@@ -558,21 +578,18 @@ def run_validation_analysis(
 
     # Process all sequences
     all_features = []
-    groups = []
 
     for seq in high_gc:
         features = process_sequence(seq, params)
         if "error" not in features:
             features["group"] = "high_gc"
             all_features.append(features)
-            groups.append("high_gc")
 
     for seq in low_gc:
         features = process_sequence(seq, params)
         if "error" not in features:
             features["group"] = "low_gc"
             all_features.append(features)
-            groups.append("low_gc")
 
     print(f"Processed {len(all_features)} sequences successfully")
 
@@ -795,7 +812,7 @@ def _generate_report(
 
         f.write("## Methodology\n\n")
         f.write("1. **Sequence Encoding:** Complex-valued signal with real part = ")
-        f.write("breathing kinetics (AT=1.0 ms⁻¹, GC=0.02 ms⁻¹) and imaginary part = ")
+        f.write("breathing lifetimes (AT=1.0 ms, GC=50.0 ms) and imaginary part = ")
         f.write("SantaLucia nearest-neighbor thermodynamic stability.\n\n")
         f.write("2. **Spectral Analysis:** Chirp Z-Transform (CZT) focused on ")
         f.write("1/10.5 bp⁻¹ helical frequency with helical phase modulation.\n\n")
