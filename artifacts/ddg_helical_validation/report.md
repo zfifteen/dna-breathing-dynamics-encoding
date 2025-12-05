@@ -2,7 +2,7 @@
 
 **Status: FAIL ✗**
 
-Generated: 2025-12-04T20:41:31.290082+00:00
+Generated: 2025-12-05T06:23:46.031265+00:00
 
 ---
 
@@ -23,7 +23,7 @@ thermodynamic perturbations (ΔΔG) across helical frequency bands.
 ### Data
 
 - **Total pairs**: 60000
-- **Bin edges (|ΔΔG| kcal/mol)**: [np.float64(0.0), np.float64(0.55), np.float64(1.12), np.float64(1.83)]
+- **Bin edges (|ΔΔG| kcal/mol)**: [0.0, 0.55, 1.12, 1.83]
 
 ---
 

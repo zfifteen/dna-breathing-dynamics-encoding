@@ -1,0 +1,36 @@
+{
+  "seed": 42,
+  "num_bootstrap": 1000,
+  "num_permutations": 500,
+  "num_bins": 3,
+  "center_sweep": [
+    10.3,
+    10.4,
+    10.5,
+    10.6,
+    10.7
+  ],
+  "width_sweep": [
+    0.01,
+    0.02,
+    0.03,
+    0.05,
+    0.06
+  ],
+  "off_band_offset": 0.2,
+  "alpha": 0.05,
+  "effect_size_threshold": 0.5,
+  "control_effect_threshold": 0.2,
+  "control_q_threshold": 0.1,
+  "temperature_k": 310.15,
+  "at_lifetime": 5.0,
+  "gc_lifetime": 25.0,
+  "timestamp": "2025-12-05T06:23:45.885146+00:00",
+  "bin_edges": [
+    0.0,
+    0.5500000000000043,
+    1.1199999999999974,
+    1.8300000000000125
+  ],
+  "n_pairs": 60000
+}

@@ -19,6 +19,7 @@ import csv
 import json
 import sys
 import warnings
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -67,6 +68,10 @@ DG_FALLBACK = -1.5
 # Adjacency thresholds for robustness criterion (in bp/turn and fraction)
 CENTER_ADJACENCY_THRESHOLD = 0.15  # bp/turn difference for adjacent centers
 WIDTH_ADJACENCY_THRESHOLD = 0.02   # Fraction difference for adjacent widths
+
+# Seed hash modulo for generating sequence-specific deterministic seeds
+# Limits the offset range while ensuring different sequences get different seeds
+SEED_HASH_MODULO = 1000
 
 
 @dataclass
@@ -285,7 +290,7 @@ def generate_wt_mutant_pairs(
 
     for seq_id, seq in sequences:
         # Generate all possible mutants for this sequence
-        mutants = generate_mutants_for_sequence(seq, seed + hash(seq_id) % 1000)
+        mutants = generate_mutants_for_sequence(seq, seed + hash(seq_id) % SEED_HASH_MODULO)
 
         for mut_seq, pos, orig, ddg in mutants:
             pair_counter += 1
@@ -317,7 +322,7 @@ def generate_wt_mutant_pairs(
         pair["bin"] = bin_labels[bin_idx]
         pair["bin_idx"] = bin_idx
 
-    return all_pairs, list(bin_edges)
+    return all_pairs, bin_edges.tolist()
 
 
 # =============================================================================
@@ -828,8 +833,6 @@ def aggregate_by_condition(
         List of aggregated statistics per condition
     """
     # Group by condition
-    from collections import defaultdict
-
     grouped = defaultdict(list)
 
     for result in sweep_results:
@@ -895,8 +898,6 @@ def compute_trend_statistics(
     Returns:
         List of trend test results per (center, width, feature) combination
     """
-    from collections import defaultdict
-
     # Group by (center, width, feature) across bins
     grouped = defaultdict(lambda: defaultdict(list))
 
@@ -1001,8 +1002,6 @@ def evaluate_acceptance_criteria(
     robustness_pass = False
     if primary_hits:
         # Group hits by feature
-        from collections import defaultdict
-
         hits_by_feature = defaultdict(list)
         for h in primary_hits:
             hits_by_feature[h["feature"]].append((h["center"], h["width"]))
@@ -1351,7 +1350,6 @@ def run_validation(
     # Run label-shuffle permutation test on high-bin results
     print("Running label-shuffle permutation tests...")
     shuffle_p_values = {}
-    from collections import defaultdict
 
     high_bin_diffs = defaultdict(list)
     for result in sweep_results:

@@ -1,8 +1,9 @@
 # DNA Breathing Dynamics Validation — Detailed Findings Report
 
-**Experiment Date:** 2025-12-04  
+**Experiment Date:** 2025-12-05  
 **Framework Version:** ΔΔG-Pairs + Helical Band Sweep Validation v1.0  
-**Dataset:** Brunello CRISPR Library (1,000 sgRNA sequences, real biological data)  
+**Dataset:** Brunello CRISPR Library (1,000 sgRNA sequences from `data/raw/brunello_parsed.fasta`)  
+**Input File:** `data/raw/brunello_1k_subsample.fasta`  
 
 ---
 
@@ -28,8 +29,8 @@ This report presents findings from the pre-registered validation framework testi
 
 ### 1.1 Dataset
 
-- **Source:** Brunello CRISPR sgRNA library (real biological sequences)
-- **Sample size:** 1,000 unique 20bp sgRNA sequences
+- **Source:** Brunello CRISPR sgRNA library (real biological sequences from `data/raw/brunello_parsed.fasta`)
+- **Sample size:** 1,000 unique 20bp sgRNA sequences (first 1,000 from 77,441 total)
 - **Generated pairs:** 60,000 WT-mutant pairs (all single-point mutations)
 - **Exclusions:** Ambiguous bases removed
 
@@ -247,10 +248,28 @@ NumPy version: 1.26.x
 SciPy version: 1.11.x
 Python version: 3.12.3
 Platform: Linux
-Timestamp: 2025-12-04T20:41:31+00:00
+Input file: data/raw/brunello_1k_subsample.fasta
+Timestamp: 2025-12-05T06:23:46+00:00
 ```
 
 All artifacts are versioned and reproducible with the specified random seed.
+
+### Execution Verification
+
+To reproduce this validation:
+
+```bash
+# Create subsample from real Brunello data
+head -2000 data/raw/brunello_parsed.fasta > data/raw/brunello_1k_subsample.fasta
+
+# Run validation (produces pairs.csv, stats.csv, trend.csv, config.json, report.md)
+python experiments/ddg_helical_validation.py \
+    --input data/raw/brunello_1k_subsample.fasta \
+    --output artifacts/ddg_helical_validation \
+    --num-bootstrap 1000 \
+    --num-permutations 500 \
+    --seed 42
+```
 
 ---
 

@@ -8,10 +8,10 @@ Tests cover:
 4. Statistical computation accuracy
 """
 
+import json
 import math
 import sys
 from pathlib import Path
-from typing import Dict, List
 
 import numpy as np
 import pytest
@@ -333,7 +333,7 @@ class TestStatistics:
         data = np.random.normal(0, 1, 50)
         theta, ci_low, ci_high = bca_bootstrap_ci(
             data,
-            lambda x: np.mean(x),
+            np.mean,
             num_bootstrap=1000,
             alpha=0.05,
             seed=42,
@@ -502,8 +502,6 @@ class TestIntegration:
 
     def test_config_serialization(self) -> None:
         """Test that config can be serialized to JSON."""
-        import json
-
         config = ValidationConfig(seed=123, num_bootstrap=500)
         config_dict = config.to_dict()
 
