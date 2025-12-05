@@ -34,4 +34,4 @@ jobs:
           pip install -e .
 
       - name: Test
-        run: pytest tests/ -v --tb=short
+        run: pytest tests/ -v --tb=short --no-cov
