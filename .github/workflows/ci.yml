@@ -11,33 +11,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
-    name: Lint
+  ci:
+    name: Lint, Build and Test
     runs-on: self-hosted
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e .
-
-      - name: Run linter
-        run: |
-          pip install flake8
-          flake8 src/ tests/ examples/ --max-line-length=88 --extend-ignore=E203,W503
-
-  build:
-    name: Build
-    runs-on: self-hosted
-    needs: lint
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -50,35 +26,15 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
+          pip install flake8 pytest pytest-cov
           pip install -r requirements.txt
           pip install -e .
+
+      - name: Lint
+        run: flake8 src/ tests/ examples/
 
       - name: Build extensions
         run: python setup.py build_ext --inplace
 
-  test:
-    name: Test
-    runs-on: self-hosted
-    needs: build
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install -r requirements.txt
-          pip install -e .
-
-      - name: Build extensions
-        run: python setup.py build_ext --inplace
-
-      - name: Run tests
-        run: |
-          pip install pytest pytest-cov
-          pytest tests/ -v --tb=short
+      - name: Test
+        run: pytest tests/ -v --tb=short
