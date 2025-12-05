@@ -77,3 +77,6 @@ benchmark.json
 *.log
 
 .snapshots/
+
+# Experiment plot outputs (large binary files)
+experiments/results/**/*.png
