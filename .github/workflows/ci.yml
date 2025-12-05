@@ -17,6 +17,8 @@ jobs:
   ci:
     name: Lint, Build and Test
     runs-on: self-hosted
+    # Only run on push events or PRs from the same repository (security)
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,18 +28,22 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install flake8 pytest pytest-cov
           pip install -r requirements.txt
           pip install -e .
 
       - name: Lint
         run: flake8 src/ tests/ examples/
 
-      - name: Build extensions
-        run: python setup.py build_ext --inplace
-
       - name: Test
-        run: pytest tests/ -v --tb=short
+        run: pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
