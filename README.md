@@ -59,12 +59,41 @@ python dna_breathing_gist.py \
 
 Output CSV contains per-sequence spectral features plus a final statistics row with Cohen’s d, bootstrap CI, and permutation p-value when group labels are supplied.
 
+
+## Validation Studies
+
+### 1. Phase Coherence Study
+Located in `experiments/phase_coherence_study.py` and `experiments/results/phase_coherence_study/`.
+
+**Research Question:** Does phase coherence at the helical frequency (~10.5 bp/turn) provide predictive advantage over random-phase controls?
+
+**Design:** Stratified K-fold cross-validation comparing phase-coherent vs random-phase CZT features for GC-content classification on real CRISPR sequences.
+
+**Results:** Phase coherence does NOT provide meaningful predictive advantage (AUROC Δ = +0.0025, p = 0.596, Cohen's d = 0.11 [negligible]). See `experiments/results/phase_coherence_study/FINDINGS.md` for full analysis.
+
+### 2. ΔΔG Helical Validation Study
+Located in `experiments/ddg_helical_validation.py` and `artifacts/ddg_helical_validation/`.
+
+**Research Question:** Can the encoding detect thermodynamic perturbations (ΔΔG) from single-point mutations across helical frequency bands?
+
+**Design:** Pre-registered validation with 1,000 real Brunello CRISPR sequences, generating 60,000 WT-mutant pairs stratified by |ΔΔG| tertiles (low/mid/high). Helical band sweep across 5 centers (10.3-10.7 bp/turn) × 5 widths (1-6%) with paired t-tests, Cohen's d, BCa bootstrap CIs, BH-FDR correction, and Jonckheere-Terpstra trend tests.
+
+**Results:** Encoding shows statistically detectable but practically negligible sensitivity (max Cohen's d = 0.061, far below pre-registered threshold of 0.5). Single-point mutations produce insufficient ΔΔG changes to generate medium effect sizes. See `artifacts/ddg_helical_validation/DETAILED_FINDINGS.md` for comprehensive analysis.
+
+**Acceptance Criteria:**
+- Primary: FAIL (no |d| ≥ 0.5 in high-ΔΔG bin)
+- Robustness: FAIL (no replication across adjacent parameters)
+- Specificity: FAIL (89 shuffle violations)
+
+**Key Insight:** The framework requires larger thermodynamic perturbations (multiple mutations) or methodological refinements to achieve biologically meaningful sensitivity.
+
 ## Reproducibility and Validation Standards
 
 - All thermodynamic parameters are fixed to SantaLucia 1998 unified values.
 - Kinetic lifetimes are set to published consensus values at 37 °C, 1 M NaCl equivalent.
 - Random number generators are seeded explicitly; results are bit-for-bit reproducible across platforms.
 - Testing policy requires real biological datasets only (no synthetic sequences); all acceptance criteria (AC1–AC6) are documented in TESTING_GUIDELINES.md.
+- All validation artifacts (CSV files, configuration, results) are version-controlled for full reproducibility.
 
 ## Citation and Contact
 

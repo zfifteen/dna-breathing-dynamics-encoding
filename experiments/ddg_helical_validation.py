@@ -2,16 +2,74 @@
 """
 ΔΔG-Pairs + Helical Band Sweep Validation Experiment.
 
-This module implements a comprehensive validation test plan for DNA breathing dynamics:
-1. ΔΔG Calculator and Pair Generation (matched WT/mutant pairs binned by |ΔΔG|)
-2. Band Sweep Analysis (spectral sweep around helical frequency f₀ ≈ 1/10.5 bp/turn)
-3. Statistical Framework (paired tests, Cohen's d with BCa bootstrap, BH-FDR correction)
-4. Control Analyses (off-band windows, label-shuffle permutations)
-5. Artifacts Generation (config.json, pairs.csv, stats.csv, trend.csv, report.md)
-6. Pre-registered Acceptance Criteria validation
+This module implements a comprehensive, pre-registered validation framework for DNA breathing
+dynamics encoding, testing sensitivity to thermodynamic perturbations (ΔΔG) through helical
+band sweep analysis.
+
+Research Question:
+-----------------
+Can the DNA breathing dynamics encoding detect thermodynamic perturbations (ΔΔG) from 
+single-point mutations across helical frequency bands centered at ~10.5 bp/turn?
+
+Experimental Design:
+-------------------
+1. ΔΔG Calculator and Pair Generation:
+   - Uses SantaLucia 1998 nearest-neighbor thermodynamic parameters
+   - Generates all single-point mutants for each wildtype sequence
+   - Bins WT-mutant pairs by |ΔΔG| tertiles (low/mid/high)
+
+2. Helical Band Sweep Analysis:
+   - Spectral sweep around helical frequency f₀ ≈ 1/10.5 bp/turn
+   - Centers: 10.3, 10.4, 10.5, 10.6, 10.7 bp/turn
+   - Widths: 1%, 2%, 3%, 5%, 6% of f₀
+   - Features: peak_magnitude, band_power, phase_coherence, SNR
+
+3. Statistical Framework:
+   - Paired t-test or Wilcoxon signed-rank (based on normality)
+   - Cohen's d for paired designs with 95% BCa bootstrap CI (≥1000 reps)
+   - Benjamini-Hochberg FDR correction across all tests
+   - Jonckheere-Terpstra trend test for dose-response across ΔΔG bins
+
+4. Control Analyses:
+   - Off-band windows (±20% from f₀) → expect null effects
+   - Label-shuffle permutations (500 reps) → empirical p_null
+
+5. Artifacts Generation:
+   - pairs.csv: All 60,000 WT-mutant pairs with ΔΔG values and bin assignments
+   - stats.csv: Statistics for all 300 (bin × center × width × feature) conditions
+   - trend.csv: Jonckheere-Terpstra trend test results
+   - config.json: Full parameter configuration with seeds
+   - report.md: Automated summary with acceptance criteria evaluation
+   - DETAILED_FINDINGS.md: Comprehensive scientific analysis
+
+Pre-registered Acceptance Criteria:
+----------------------------------
+- Primary: At least one (center, width, feature) in high-ΔΔG bin achieves
+           |d| ≥ 0.5, FDR-q < 0.05, 95% CI excludes 0
+- Robustness: Effect replicates across ≥2 adjacent centers or widths
+- Specificity: Off-band and shuffle controls remain non-significant (|d| < 0.2, q ≥ 0.1)
+
+Validation Results:
+------------------
+Executed on 1,000 real Brunello CRISPR sequences (60,000 WT-mutant pairs):
+- Primary: FAIL (max |d| = 0.061, far below 0.5 threshold)
+- Robustness: FAIL (no primary hits to evaluate)
+- Specificity: FAIL (89 shuffle violations)
+
+Key Finding: DNA breathing dynamics encoding shows statistically detectable but practically
+negligible sensitivity to single-mutation thermodynamic perturbations. Larger perturbations
+or methodological refinements may be needed.
 
 Usage:
-    python experiments/ddg_helical_validation.py --input data/human/depmap_subsample/sequences.fasta
+------
+    # Create real data subsample
+    head -2000 data/raw/brunello_parsed.fasta > data/raw/brunello_1k_subsample.fasta
+    
+    # Run validation
+    python experiments/ddg_helical_validation.py \\
+        --input data/raw/brunello_1k_subsample.fasta \\
+        --output artifacts/ddg_helical_validation \\
+        --seed 42
 """
 
 import argparse
