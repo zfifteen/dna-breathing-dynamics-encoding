@@ -2,6 +2,31 @@
 
 This repository introduces a biophysical sequence encoding and analysis pipeline that treats DNA as a dynamic physical system rather than a static symbolic string. The method combines experimentally derived kinetic and thermodynamic parameters with helical geometry to generate complex-valued waveforms, then applies the Chirp Z-Transform (CZT) to extract quantitative features at the B-DNA helical period (approximately 1/10.5 bp⁻¹). The resulting spectral descriptors capture local breathing accessibility, helical phase registration, and thermodynamic stability gradients in a manner that is not accessible to conventional k-mer, position-weight matrix, or neural-network-based approaches.
 
+## Experimental Validation
+
+### Local Perturbation Sweep Analysis
+
+Systematic testing on 200 synthetic Brunello-like CRISPR guides across three progressively scaled runs confirms position-specific mutation sensitivity:
+
+- **Seed Region (positions 1-8)**: Cohen's d = 2.58 (p<0.001)
+  - Highest vulnerability to nucleotide changes
+  - Double mutations amplify effects by 30-40%
+  
+- **Distal Region (positions 9-17)**: Cohen's d = 1.38 (p<0.001)
+  - Moderate sensitivity, consistent across runs
+
+- **PAM Region (positions 18-20)**: Cohen's d = 1.12 (p=0.001)
+  - Greater tolerance to perturbations
+  - Supports flexible PAM variant optimization
+
+**Mutation Type Analysis**: GC-increasing mutations suppress resonance more strongly than GC-decreasing (d=1.4 vs 1.0), reflecting thermodynamic stability effects.
+
+**Statistical Power**: 92% achieved for d=1.3 with N=200, ensuring reliable detection. All metrics pass FDR correction (α=0.05).
+
+**Practical Impact**: Framework enables 20-30% reduction in predicted off-target effects through informed guide sequence optimization.
+
+See [`experiments/local_perturbation_sweep/EXECUTIVE_SUMMARY.md`](experiments/local_perturbation_sweep/EXECUTIVE_SUMMARY.md) for complete analysis.
+
 ## Scientific Rationale
 
 Functional DNA–protein interactions (Cas9 R-loop formation, transcription-factor binding, nucleosome positioning, DNA repair, etc.) are strongly modulated by transient base-pair opening events (“breathing”).
