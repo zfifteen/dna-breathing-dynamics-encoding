@@ -332,12 +332,12 @@ def extract_czt_features(
     phases = np.angle(spectrum)
 
     # Peak detection
-    peak_idx = np.argmax(mags)
+    peak_idx = int(np.argmax(mags))
     peak_magnitude = mags[peak_idx]
     phase_at_peak = phases[peak_idx]
 
     # Band-integrated power
-    band_power = np.sum(mags**2)
+    band_power = float(np.sum(mags**2))
 
     # Spectral centroid (weighted mean frequency)
     if np.sum(mags) > 0:
@@ -609,7 +609,7 @@ def run_cv_evaluation(
     cv = RepeatedStratifiedKFold(
         n_splits=config.n_folds,
         n_repeats=config.n_repeats,
-        random_state=config.cv_seed,
+        random_state=int(config.cv_seed),
     )
 
     fold_metrics: List[FoldMetrics] = []
@@ -637,8 +637,8 @@ def run_cv_evaluation(
         X_test_b_scaled = scaler_b.transform(X_test_b)
 
         # Train logistic regression (no hyperparameter tuning)
-        clf_a = LogisticRegression(max_iter=1000, random_state=config.global_seed)
-        clf_b = LogisticRegression(max_iter=1000, random_state=config.global_seed)
+        clf_a = LogisticRegression(max_iter=1000, random_state=int(config.global_seed))
+        clf_b = LogisticRegression(max_iter=1000, random_state=int(config.global_seed))
 
         try:
             clf_a.fit(X_train_a_scaled, y_train)
@@ -647,16 +647,16 @@ def run_cv_evaluation(
             fold_idx += 1
             continue
 
-        y_prob_a = clf_a.predict_proba(X_test_a_scaled)[:, 1]
-        y_prob_b = clf_b.predict_proba(X_test_b_scaled)[:, 1]
+        y_prob_a = clf_a.predict_proba(X_test_a_scaled)[:, 1].astype(float).astype(float)
+        y_prob_b = clf_b.predict_proba(X_test_b_scaled)[:, 1].astype(float).astype(float)
 
         # Compute metrics
-        auroc_a = roc_auc_score(y_test, y_prob_a)
-        auroc_b = roc_auc_score(y_test, y_prob_b)
-        auprc_a = average_precision_score(y_test, y_prob_a)
-        auprc_b = average_precision_score(y_test, y_prob_b)
-        brier_a = brier_score_loss(y_test, y_prob_a)
-        brier_b = brier_score_loss(y_test, y_prob_b)
+        auroc_a = float(roc_auc_score(y_test, y_prob_a))
+        auroc_b = float(roc_auc_score(y_test, y_prob_b))
+        auprc_a = float(average_precision_score(y_test, y_prob_a))
+        auprc_b = float(average_precision_score(y_test, y_prob_b))
+        brier_a = float(brier_score_loss(y_test, y_prob_a))
+        brier_b = float(brier_score_loss(y_test, y_prob_b))
 
         metrics = FoldMetrics(
             fold_idx=fold_in_repeat,
@@ -723,11 +723,19 @@ def compute_paired_statistics(
         std_delta = float(np.std(deltas_arr, ddof=1))
 
         # Paired t-test
-        t_stat, t_pval = stats.ttest_1samp(deltas_arr, 0)
+        t_stat, t_pval = stats.ttest_1samp(deltas_arr, 0.0)
+        t_stat = float(t_stat)
+        t_pval = float(t_pval)
 
         # Wilcoxon signed-rank test
         try:
             w_stat, w_pval = stats.wilcoxon(deltas_arr, zero_method="wilcox")
+            w_stat = float(w_stat) if not np.isnan(w_stat) else None
+            w_pval = float(w_pval)
+            w_stat = float(w_stat) if not np.isnan(w_stat) else None
+            w_pval = float(w_pval)
+            w_stat = float(w_stat) if not np.isnan(w_stat) else None
+            w_pval = float(w_pval)
         except ValueError:
             # All zeros or insufficient variation
             w_stat, w_pval = np.nan, 1.0
@@ -736,7 +744,7 @@ def compute_paired_statistics(
         cohens_d = mean_delta / std_delta if std_delta > 0 else 0.0
 
         # Bootstrap CI for Cohen's d
-        rng = np.random.default_rng(config.global_seed)
+        rng = np.random.default_rng(int(config.global_seed))
         bootstrap_d = []
         for _ in range(config.n_bootstrap):
             boot_sample = rng.choice(deltas_arr, size=n, replace=True)
@@ -833,7 +841,7 @@ def run_permutation_test(
     Returns:
         Dictionary with permutation test results
     """
-    rng = np.random.default_rng(config.global_seed + 1000)
+    rng = np.random.default_rng(int(config.global_seed + 1000))
 
     # Observed delta
     observed_metrics = run_cv_evaluation(X_coherent, X_random, y, config)
@@ -931,7 +939,7 @@ def run_ablation_study(
     cv = RepeatedStratifiedKFold(
         n_splits=config.n_folds,
         n_repeats=1,
-        random_state=config.cv_seed,
+        random_state=int(config.cv_seed),
     )
 
     aurocs_phase: List[float] = []
@@ -948,10 +956,10 @@ def run_ablation_study(
             X_phase_train = scaler_phase.fit_transform(X_phase[train_idx])
             X_phase_test = scaler_phase.transform(X_phase[test_idx])
             clf_phase = LogisticRegression(
-                max_iter=1000, random_state=config.global_seed
+                max_iter=1000, random_state=int(config.global_seed)
             )
             clf_phase.fit(X_phase_train, y_train)
-            y_prob_phase = clf_phase.predict_proba(X_phase_test)[:, 1]
+            y_prob_phase = clf_phase.predict_proba(X_phase_test)[:, 1].astype(float)
             aurocs_phase.append(roc_auc_score(y_test, y_prob_phase))
         except Exception:
             pass
@@ -960,9 +968,9 @@ def run_ablation_study(
             scaler_mag = StandardScaler()
             X_mag_train = scaler_mag.fit_transform(X_mag[train_idx])
             X_mag_test = scaler_mag.transform(X_mag[test_idx])
-            clf_mag = LogisticRegression(max_iter=1000, random_state=config.global_seed)
+            clf_mag = LogisticRegression(max_iter=1000, random_state=int(config.global_seed))
             clf_mag.fit(X_mag_train, y_train)
-            y_prob_mag = clf_mag.predict_proba(X_mag_test)[:, 1]
+            y_prob_mag = clf_mag.predict_proba(X_mag_test)[:, 1].astype(float)
             aurocs_mag.append(roc_auc_score(y_test, y_prob_mag))
         except Exception:
             pass
@@ -1221,7 +1229,7 @@ def run_study(
     # Apply pilot fraction if specified
     if config.pilot_fraction is not None and 0 < config.pilot_fraction < 1:
         n_pilot = int(n_samples * config.pilot_fraction)
-        rng = np.random.default_rng(config.global_seed)
+        rng = np.random.default_rng(int(config.global_seed))
         pilot_idx = rng.choice(n_samples, size=n_pilot, replace=False)
         sequences = [sequences[i] for i in pilot_idx]
         y = y[pilot_idx]
@@ -1232,7 +1240,7 @@ def run_study(
 
     # Extract features
     print("Extracting CZT features...")
-    phase_rng = np.random.default_rng(config.phase_seed)
+    phase_rng = np.random.default_rng(int(config.phase_seed))
     X_coherent, X_random = extract_features_for_sequences(sequences, config, phase_rng)
     print(f"  Features shape: {X_coherent.shape}")
     print()

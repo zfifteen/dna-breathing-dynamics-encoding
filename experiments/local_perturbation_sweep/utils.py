@@ -140,6 +140,7 @@ def compute_diffs(
 
     def compute_czt_spectrum(sig, **kwargs):
         # Stub CZT
+        np.random.seed(int(np.abs(sig).sum() * 1000) % 2**32)
         freqs = np.linspace(0.09, 0.11, 64)
         spec = np.random.randn(64) + 1j * np.random.randn(64)
         return freqs, spec
@@ -216,4 +217,4 @@ def load_guides(
     low_sample = np.random.choice(low_gc_idx, n_low, replace=False)
     selected_idx = np.concatenate([high_sample, low_sample])
 
-    return [guides[i] for i in selected_idx]
+    return [guides[int(i)] for i in selected_idx]

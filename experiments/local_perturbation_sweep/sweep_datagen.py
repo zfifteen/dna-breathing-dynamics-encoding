@@ -97,28 +97,31 @@ def load_and_perturb_guides(
     for wt in wt_guides:
         for pair in adjacent_pairs[:5]:  # 5 per guide for balance
             for mtypes in [("inc", "inc"), ("dec", "dec")]:
-                mut = generate_double_mutant(
-                    wt, pair, mtypes, seed=seed + pair[0] * 100
-                )
-                if len(mut) == 20:
-                    avg_pos = (pair[0] + pair[1]) / 2
-                    region = (
-                        "seed"
-                        if 1 <= avg_pos <= 8
-                        else "distal"
-                        if 9 <= avg_pos <= 17
-                        else "PAM"
+                try:
+                    mut = generate_double_mutant(
+                        wt, pair, mtypes, seed=seed + pair[0] * 100
                     )
-                    perturbations.append(
-                        {
-                            "wt_seq": wt,
-                            "mut_seq": mut,
-                            "pos": pair,
-                            "type": "both_" + mtypes[0],
-                            "region": region,
-                            "num_mut": 2,
-                        }
-                    )
+                    if len(mut) == 20:
+                        avg_pos = (pair[0] + pair[1]) / 2
+                        region = (
+                            "seed"
+                            if 1 <= avg_pos <= 8
+                            else "distal"
+                            if 9 <= avg_pos <= 17
+                            else "PAM"
+                        )
+                        perturbations.append(
+                            {
+                                "wt_seq": wt,
+                                "mut_seq": mut,
+                                "pos": pair,
+                                "type": "both_" + mtypes[0],
+                                "region": region,
+                                "num_mut": 2,
+                            }
+                        )
+                except ValueError:
+                    continue
 
     return perturbations
 
@@ -162,7 +165,6 @@ def analyze_spectral_shifts(
         region = p["region"]
         num_mut = p["num_mut"]
 
-        wt_diffs = compute_diffs(wt, wt)
         mut_diffs = compute_diffs(wt, mut)
 
         row = {
@@ -175,7 +177,7 @@ def analyze_spectral_shifts(
             "num_mut": num_mut,
             "control_flag": False,
             **{
-                f"delta_{k}": mut_diffs.get(k, 0) - wt_diffs.get(k, 0)
+                f"delta_{k}": mut_diffs.get(f"delta_{k}", 0)
                 for k in all_diffs
             },
             "seed": 42,
@@ -203,7 +205,7 @@ def analyze_spectral_shifts(
             "region": "control",
             "num_mut": 1,
             "control_flag": True,
-            **{f"delta_{k}": control_diffs.get(k, 0) for k in all_diffs},
+            **{f"delta_{k}": control_diffs.get(f"delta_{k}", 0) for k in all_diffs},
             "seed": 42,
         }
         data_rows.append(row)
@@ -211,7 +213,7 @@ def analyze_spectral_shifts(
             all_diffs[k].append(row[f"delta_{k}"])
 
     # Stats
-    stats = {}
+    metric_stats = {}
     for k, vals in all_diffs.items():
         null_vals = [v for v, row in zip(vals, data_rows) if row["control_flag"]]
         non_null_vals = [
@@ -233,7 +235,7 @@ def analyze_spectral_shifts(
                     / np.std(np.concatenate([bs_non, bs_null]), ddof=1)
                 )
             ci_low, ci_high = np.percentile(bs_d, [2.5, 97.5])
-            stats[k] = {
+            metric_stats[k] = {
                 "cohens_d": d,
                 "p_ttest": p,
                 "ci_low": ci_low,
@@ -266,7 +268,7 @@ def analyze_spectral_shifts(
     with open(output_dir / "metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
 
-    return {"stats": stats, "data": df}
+    return {"stats": metric_stats, "data": df}
 
 
 def main() -> None:
