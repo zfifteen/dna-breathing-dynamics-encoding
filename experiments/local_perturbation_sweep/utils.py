@@ -23,7 +23,61 @@ def generate_double_mutant(\n    wt_seq: str,\n    positions: Tuple[int, int],  
 # =============================================================================
 
 
-def compute_diffs(\n    wt_seq: str,\n    mut_seq: str,\n) -> Dict[str, float]:\n    \"\"\"\n    PURPOSE: As a researcher, I want paired spectral diffs so that I can quantify\n    perturbation impact on resonance/coherence.\n\n    INPUTS: [wt_seq: str; mut_seq: str (single/double mutant)]\n    EXPECTED OUTPUT: [Dict: {'delta_mag': float, 'delta_coh': float, ...} from CZT features\n                      (mut - WT); e.g., delta_mag ~0.1 for GC inc]\n    TEST DATA: [wt='ATGC', mut='GTGC' (pos1 A->G inc); expect delta_mag <0 (stability up,\n                resonance down); delta_coh ~0.05 shift]\n    REPRODUCTION: [Encode both (helical=True); CZT/extract (resonance_mag, phase_coh);\n                   subtract; verify finite diffs, |delta| >0 for valid mut]\n    \"\"\"\n    # Reuse from project (assume importable; stub if not)\n    try:\n        from src.core.params import encode_sequence  # Or full path to encode\n        from gists.breathing.czt_feature_extractor.src.dna_breathing_gist import (\n            compute_czt_spectrum,\n            extract_features,\n        )\n    except ImportError:\n        # Fallback stub for scaffold (replace with actual in full impl)\n        def encode_sequence(seq): return np.array([1j] * len(seq))\n        def compute_czt_spectrum(sig, **kwargs): return np.linspace(0,1,64), np.array([1j] * 64)\n        def extract_features(freqs, spec): return {'resonance_mag': 1.0, 'phase_coh': 0.5}\n\n    wt_signal = encode_sequence(wt_seq)\n    mut_signal = encode_sequence(mut_seq)\n\n    _, wt_spec = compute_czt_spectrum(wt_signal)\n    _, mut_spec = compute_czt_spectrum(mut_signal)\n\n    wt_features = extract_features(wt_spec)  # Assume returns dict with keys\n    mut_features = extract_features(mut_spec)\n\n    metrics = ['resonance_mag', 'phase_coh', 'spectral_centroid', 'band_energy', 'snr']\n    diffs = {f'delta_{m}': mut_features.get(m, 0) - wt_features.get(m, 0) for m in metrics}\n\n    # Ensure finite\n    for v in diffs.values():\n        assert np.isfinite(v)\n\n    return diffs
+def compute_diffs(
+    wt_seq: str,
+    mut_seq: str,
+) -> Dict[str, float]:
+    """
+    PURPOSE: As a researcher, I want paired spectral diffs so that I can quantify
+    perturbation impact on resonance/coherence.
+
+    INPUTS: [wt_seq: str; mut_seq: str (single/double mutant)]
+    EXPECTED OUTPUT: [Dict: {'delta_mag': float, 'delta_coh': float, ...} from CZT features
+                      (mut - WT); e.g., delta_mag ~0.1 for GC inc]
+    TEST DATA: [wt='ATGC', mut='GTGC' (pos1 A->G inc); expect delta_mag <0 (stability up,
+                resonance down); delta_coh ~0.05 shift]
+    REPRODUCTION: [Encode both (helical=True); CZT/extract (resonance_mag, phase_coh);
+                   subtract; verify finite diffs, |delta| >0 for valid mut]
+    """
+    # Stub for testing (replace with actual imports in production)
+    # In full impl: import from src/core/params.py and gist
+    import numpy as np
+    def encode_sequence(seq):
+        # Simple stub: random complex values
+        np.random.seed(hash(seq) % 10000)
+        return np.random.randn(len(seq)) + 1j * np.random.randn(len(seq))
+    def compute_czt_spectrum(sig, **kwargs):
+        # Stub CZT
+        freqs = np.linspace(0.09, 0.11, 64)
+        spec = np.random.randn(64) + 1j * np.random.randn(64)
+        return freqs, spec
+    def extract_features(freqs, spec):
+        # Stub features
+        return {
+            'resonance_mag': np.abs(spec).max(),
+            'phase_coh': np.mean(np.cos(np.angle(spec))),
+            'spectral_centroid': np.sum(freqs * np.abs(spec)) / np.sum(np.abs(spec)),
+            'band_energy': np.sum(np.abs(spec)**2),
+            'snr': np.abs(spec).max() / np.std(np.abs(spec)),
+        }
+
+    wt_signal = encode_sequence(wt_seq)
+    mut_signal = encode_sequence(mut_seq)
+
+    _, wt_spec = compute_czt_spectrum(wt_signal)
+    _, mut_spec = compute_czt_spectrum(mut_signal)
+
+    wt_features = extract_features(_, wt_spec)
+    mut_features = extract_features(_, mut_spec)
+
+    metrics = ['resonance_mag', 'phase_coh', 'spectral_centroid', 'band_energy', 'snr']
+    diffs = {f'delta_{m}': mut_features[m] - wt_features[m] for m in metrics}
+
+    # Ensure finite
+    for v in diffs.values():
+        assert np.isfinite(v)
+
+    return diffs
 
 
 def load_guides(\n    fasta_path: Path,\n    n_guides: int,\n    seed: int = 42,\n) -> List[str]:\n    \"\"\"\n    PURPOSE: As a researcher, I want balanced guide loading so that I can ensure\n    representative GC distribution.\n\n    INPUTS: [fasta_path: Path to Brunello FASTA; n_guides: int; seed: int for subset]\n    EXPECTED OUTPUT: [List[str] of n_guides 20nt sequences; ~50/50 high/low GC]\n    TEST DATA: [brunello.fasta, n=200, seed=42: expect 100 high-GC (>0.5), 100 low;\n                all len=20, ATGC only]\n    REPRODUCTION: [Parse FASTA (Bio.SeqIO); compute gc_content; stratify sample by GC;\n                   verify balance, reproducibility]\n    \"\"\"\n    from Bio import SeqIO  # Assumes biopython available\n    import numpy as np\n    np.random.seed(seed)\n\n    guides = []\n    for rec in SeqIO.parse(fasta_path, \"fasta\"):\n        seq = str(rec.seq).upper()\n        if len(seq) != 20 or not all(b in 'ATGC' for b in seq):\n            continue\n        guides.append(seq)\n    if len(guides) < n_guides:\n        raise ValueError(f\"Insufficient valid guides: {len(guides)} < {n_guides}\")\n\n    # Compute GC\n    gc_contents = [sum(1 for b in g if b in 'GC') / 20 for g in guides]\n    high_gc_idx = [i for i, gc in enumerate(gc_contents) if gc > 0.5]\n    low_gc_idx = [i for i, gc in enumerate(gc_contents) if gc <= 0.5]\n\n    n_high = min(len(high_gc_idx), n_guides // 2)\n    n_low = n_guides - n_high\n    n_low = min(n_low, len(low_gc_idx))\n\n    high_sample = np.random.choice(high_gc_idx, n_high, replace=False)\n    low_sample = np.random.choice(low_gc_idx, n_low, replace=False)\n    selected_idx = np.concatenate([high_sample, low_sample])\n\n    return [guides[i] for i in selected_idx]

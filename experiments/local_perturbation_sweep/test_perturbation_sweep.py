@@ -82,7 +82,19 @@ class TestPerturbationSweepIntegration:
         # assert all finite in df['delta_mag']; json=load(tmp_path/'metadata.json'); assert 'stats' in json
         pass
 
-    def test_output_schema_validation(self, tmp_path: Path) -> None:\n        \"\"\"\n        PURPOSE: As an engineer, I want schema check so that I can ensure CSV/JSON\n        match expected structure for downstream analysis.\n\n        INPUTS: [tmp_path: temp dir; assumes small run outputs files]\n        EXPECTED OUTPUT: [CSV cols: ['seq_id', 'wt_seq', 'mut_pos', ..., 'delta_coh', 'control_flag'];\n                          JSON keys: ['grids', 'metrics', 'generated_at']]\n        TEST DATA: [Small run; expect exact col list len=20; JSON valid dict no errors]\n        REPRODUCTION: [Run analysis; pd.read_csv cols==expected; json.load no KeyError]\n        \"\"\"\n        from experiments.local_perturbation_sweep.sweep_datagen import analyze_spectral_shifts\n        from experiments.local_perturbation_sweep.utils import generate_mutant\n\n        perturbations = [{'wt_seq': 'AT'*20, 'mut_seq': generate_mutant('AT'*20,1,'inc'), 'pos':1, 'type':'inc', 'region':'seed', 'num_mut':1}]\n        results = analyze_spectral_shifts(perturbations, tmp_path)\n\n        csv_path = tmp_path / 'sweep_data.csv'\n        df = pd.read_csv(csv_path)\n        expected_cols = ['seq_id', 'wt_seq', 'mut_seq', 'pos', 'type', 'region', 'num_mut', 'control_flag', 'delta_resonance_mag', 'delta_phase_coh', 'delta_spectral_centroid', 'delta_band_energy', 'delta_snr', 'seed']\n        assert set(df.columns) == set(expected_cols)\n        assert len(df) == 2  # 1 real + 1 control\n\n        json_path = tmp_path / 'metadata.json'\n        data = json.load(open(json_path))\n        assert set(data.keys()) >= {'experiment_name', 'parameters', 'metrics', 'generated_at', 'power'}\n        assert 'grids' in data['parameters']\n        assert isinstance(data['power'], dict)
+    def test_output_schema_validation(self, tmp_path: Path) -> None:\n        \"\"\"\n        PURPOSE: As an engineer, I want schema check so that I can ensure CSV/JSON\n        match expected structure for downstream analysis.\n\n        INPUTS: [tmp_path: temp dir; assumes small run outputs files]\n        EXPECTED OUTPUT: [CSV cols: ['seq_id', 'wt_seq', 'mut_pos', ..., 'delta_coh', 'control_flag'];\n                          JSON keys: ['grids', 'metrics', 'generated_at']]\n        TEST DATA: [Small run; expect exact col list len=20; JSON valid dict no errors]\n        REPRODUCTION: [Run analysis; pd.read_csv cols==expected; json.load no KeyError]\n        \"\"\"\n        from experiments.local_perturbation_sweep.sweep_datagen import analyze_spectral_shifts\n        from experiments.local_perturbation_sweep.utils import generate_mutant\n\n        perturbations = [{'wt_seq': 'AT'*20, 'mut_seq': generate_mutant('AT'*20,1,'inc'), 'pos':1, 'type':'inc', 'region':'seed', 'num_mut':1}]\n        results = analyze_spectral_shifts(perturbations, tmp_path)
+
+        csv_path = tmp_path / 'sweep_data.csv'
+        df = pd.read_csv(csv_path)
+        expected_cols = ['seq_id', 'wt_seq', 'mut_seq', 'pos', 'type', 'region', 'num_mut', 'control_flag', 'delta_resonance_mag', 'delta_phase_coh', 'delta_spectral_centroid', 'delta_band_energy', 'delta_snr', 'seed']
+        assert set(df.columns) == set(expected_cols)
+        assert len(df) == 2  # 1 real + 1 control
+
+        json_path = tmp_path / 'metadata.json'
+        data = json.load(open(json_path))
+        assert set(data.keys()) >= {'experiment_name', 'parameters', 'metrics', 'generated_at', 'power'}
+        assert 'grids' in data['parameters']
+        assert isinstance(data['power'], dict)
 
     def test_reproducibility_with_seed(
         self, sample_guides: list, tmp_path: Path

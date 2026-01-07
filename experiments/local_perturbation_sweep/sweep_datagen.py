@@ -9,7 +9,7 @@ import argparse
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from .utils import (
+from experiments.local_perturbation_sweep.utils import (
     generate_mutant,
     compute_diffs,
     load_guides,
@@ -44,7 +44,10 @@ def load_and_perturb_guides(
     TEST DATA: [e.g., 200 20nt guides; seed=42 yields deterministic mutants]
     REPRODUCTION: [Load guides; apply generate_mutant with fixed seed; verify output]
     """
-    from .utils import generate_mutant, generate_double_mutant
+    from experiments.local_perturbation_sweep.utils import (
+        generate_mutant,
+        generate_double_mutant,
+    )
     import random
 
     random.seed(seed)
