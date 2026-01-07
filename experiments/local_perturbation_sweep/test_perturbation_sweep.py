@@ -5,8 +5,13 @@ Tests end-to-end: loading, perturbation generation, diff computation, outputs.
 Researcher-framed docstrings; no full logic—skeletons verify structure/shapes.
 """
 
-import pytest
+import sys
 from pathlib import Path
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+import pytest
 import pandas as pd
 
 from experiments.local_perturbation_sweep.sweep_datagen import (

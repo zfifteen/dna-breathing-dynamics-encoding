@@ -5,8 +5,13 @@ Local Perturbation Sweep: CRISPR Guide Resonance Analysis.
 Main entry for generating perturbation datasets and computing spectral diffs.
 """
 
-import argparse
+import sys
 from pathlib import Path
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+import argparse
 from typing import Dict, List, Tuple
 
 from experiments.local_perturbation_sweep.utils import (

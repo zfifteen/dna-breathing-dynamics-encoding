@@ -1,11 +1,14 @@
 """
 Utilities for local perturbation sweep: mutant generation, diff computation.
-
-No logic implemented—stubs for biophysical mutations and spectral analysis.
 """
 
-from typing import Dict, List, Tuple
+import sys
 from pathlib import Path
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from typing import Dict, List, Tuple
 
 # =============================================================================
 # Mutant Generation Stub
