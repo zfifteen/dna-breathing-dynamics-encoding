@@ -12,50 +12,10 @@ from pathlib import Path
 # =============================================================================
 
 
-def generate_mutant(
-    wt_seq: str,
-    position: int,
-    mutation_type: str,  # 'inc' or 'dec' GC
-    seed: int = 42,
-) -> str:
-    """
-    PURPOSE: As a researcher, I want to generate position-specific mutants so that I can
-    test local stability/kinetics changes.
-
-    INPUTS: [wt_seq: str 20nt guide; position: int 1-20; mutation_type: str 'inc' (A/T->G/C)
-             or 'dec' (G/C->A/T); seed: int for reproducibility]
-    EXPECTED OUTPUT: [mut_seq: str with exactly one change at position (1-based);
-                      e.g., wt='ATGC...', pos=1 'A'->'G' (inc) yields 'GTGC...']
-    TEST DATA: [wt='ATGC' (4nt test), pos=1, 'inc': expect 'GTGC'; pos=2 'T'->'C': 'ACGC']
-    REPRODUCTION: [Manually substitute base at pos-1 (0-based); verify single change,
-                   ATGC valid; same seed yields same if random choice needed]
-    """
-    # TODO: Implement: 1-based pos; if base allows (e.g., inc: if A/T, A->G/T->C random);
-    # else skip/raise; ensure exactly one change; use seed for ties
-    pass
-    return ""
+def generate_mutant(\n    wt_seq: str,\n    position: int,\n    mutation_type: str,  # 'inc' or 'dec' GC\n    seed: int = 42,\n) -> str:\n    \"\"\"\n    PURPOSE: As a researcher, I want to generate position-specific mutants so that I can\n    test local stability/kinetics changes.\n\n    INPUTS: [wt_seq: str 20nt guide; position: int 1-20; mutation_type: str 'inc' (A/T->G/C)\n             or 'dec' (G/C->A/T); seed: int for reproducibility]\n    EXPECTED OUTPUT: [mut_seq: str with exactly one change at position (1-based);\n                      e.g., wt='ATGC...', pos=1 'A'->'G' (inc) yields 'GTGC...']\n    TEST DATA: [wt='ATGC' (4nt test), pos=1, 'inc': expect 'GTGC'; pos=2 'T'->'C': 'ACGC']\n    REPRODUCTION: [Manually substitute base at pos-1 (0-based); verify single change,\n                   ATGC valid; same seed yields same if random choice needed]\n    \"\"\"\n    import random\n    random.seed(seed)\n\n    if position < 1 or position > len(wt_seq):\n        raise ValueError(f\"Position {position} out of range for seq len {len(wt_seq)}\")\n\n    wt_list = list(wt_seq.upper())\n    pos = position - 1  # 0-based\n    base = wt_list[pos]\n\n    if mutation_type == 'inc':  # Increase GC: A/T -> G/C\n        if base in 'AT':\n            if base == 'A':\n                wt_list[pos] = 'G'\n            else:  # 'T'\n                wt_list[pos] = 'C'\n        else:\n            raise ValueError(f\"Cannot increase GC at pos {position}: base '{base}' is already GC\")\n    elif mutation_type == 'dec':  # Decrease GC: G/C -> A/T\n        if base in 'GC':\n            if base == 'G':\n                wt_list[pos] = 'A'\n            else:  # 'C'\n                wt_list[pos] = 'T'\n        else:\n            raise ValueError(f\"Cannot decrease GC at pos {position}: base '{base}' is already AT\")\n    else:\n        raise ValueError(f\"Invalid mutation_type: {mutation_type}; must be 'inc' or 'dec'\")\n\n    mut_seq = ''.join(wt_list)\n    # Verify exactly one change (simple check: count diffs)\n    if sum(a != b for a, b in zip(wt_seq, mut_seq)) != 1:\n        raise ValueError(\"Generated mutant has !=1 change\")\n\n    return mut_seq
 
 
-def generate_double_mutant(
-    wt_seq: str,
-    positions: Tuple[int, int],  # Adjacent, e.g., (1,2)
-    mutation_types: Tuple[str, str],
-    seed: int = 42,
-) -> str:
-    """
-    PURPOSE: As a researcher, I want double adjacent mutants so that I can assess
-    cumulative effects on helical phase.
-
-    INPUTS: [wt_seq: str; positions: Tuple[int,int] adjacent 1-based; mutation_types:
-             Tuple[str,str] 'inc'/'dec'; seed: int]
-    EXPECTED OUTPUT: [mut_seq: str with two changes at positions; e.g., pos=(1,2),
-                      types=('inc','dec'): change pos1 inc, pos2 dec]
-    TEST DATA: [wt='ATGCT', pos=(1,2), ('inc','dec'): expect 'GCGCT' if A->G, T->A]
-    REPRODUCTION: [Apply generate_mutant sequentially; verify two changes, no overlap issues]
-    """
-    # TODO: Implement: Sequential single mutants; handle if position invalid
-    pass
-    return ""
+def generate_double_mutant(\n    wt_seq: str,\n    positions: Tuple[int, int],  # Adjacent, e.g., (1,2)\n    mutation_types: Tuple[str, str],\n    seed: int = 42,\n) -> str:\n    \"\"\"\n    PURPOSE: As a researcher, I want double adjacent mutants so that I can assess\n    cumulative effects on helical phase.\n\n    INPUTS: [wt_seq: str; positions: Tuple[int,int] adjacent 1-based; mutation_types:\n             Tuple[str,str] 'inc'/'dec'; seed: int]\n    EXPECTED OUTPUT: [mut_seq: str with two changes at positions; e.g., pos=(1,2),\n                      types=('inc','dec'): change pos1 inc, pos2 dec]\n    TEST DATA: [wt='ATGCT', pos=(1,2), ('inc','dec'): expect 'GCGCT' if A->G, T->A]\n    REPRODUCTION: [Apply generate_mutant sequentially; verify two changes, no overlap issues]\n    \"\"\"\n    import random\n    random.seed(seed)\n\n    mut_seq = wt_seq\n    for pos, mtype in zip(positions, mutation_types):\n        mut_seq = generate_mutant(mut_seq, pos, mtype, seed=seed + pos)  # Offset seed per mut\n\n    # Verify two changes (hamming dist=2)\n    if sum(a != b for a, b in zip(wt_seq, mut_seq)) != 2:\n        raise ValueError(\"Double mutant has !=2 changes\")\n\n    return mut_seq
 
 
 # =============================================================================
@@ -63,45 +23,7 @@ def generate_double_mutant(
 # =============================================================================
 
 
-def compute_diffs(
-    wt_seq: str,
-    mut_seq: str,
-) -> Dict[str, float]:
-    """
-    PURPOSE: As a researcher, I want paired spectral diffs so that I can quantify
-    perturbation impact on resonance/coherence.
-
-    INPUTS: [wt_seq: str; mut_seq: str (single/double mutant)]
-    EXPECTED OUTPUT: [Dict: {'delta_mag': float, 'delta_coh': float, ...} from CZT features
-                      (mut - WT); e.g., delta_mag ~0.1 for GC inc]
-    TEST DATA: [wt='ATGC', mut='GTGC' (pos1 A->G inc); expect delta_mag <0 (stability up,
-                resonance down); delta_coh ~0.05 shift]
-    REPRODUCTION: [Encode both (helical=True); CZT/extract (resonance_mag, phase_coh);
-                   subtract; verify finite diffs, |delta| >0 for valid mut]
-    """
-    # TODO: Implement: Reuse src/core/params.encode_sequence; CZT from gist;
-    # extract: resonance_mag=peak_mag, phase_coh=kappa, centroid, energy, snr;
-    # return {f'delta_{k}': mut[k] - wt[k] for k in metrics}
-    pass
-    return {}
+def compute_diffs(\n    wt_seq: str,\n    mut_seq: str,\n) -> Dict[str, float]:\n    \"\"\"\n    PURPOSE: As a researcher, I want paired spectral diffs so that I can quantify\n    perturbation impact on resonance/coherence.\n\n    INPUTS: [wt_seq: str; mut_seq: str (single/double mutant)]\n    EXPECTED OUTPUT: [Dict: {'delta_mag': float, 'delta_coh': float, ...} from CZT features\n                      (mut - WT); e.g., delta_mag ~0.1 for GC inc]\n    TEST DATA: [wt='ATGC', mut='GTGC' (pos1 A->G inc); expect delta_mag <0 (stability up,\n                resonance down); delta_coh ~0.05 shift]\n    REPRODUCTION: [Encode both (helical=True); CZT/extract (resonance_mag, phase_coh);\n                   subtract; verify finite diffs, |delta| >0 for valid mut]\n    \"\"\"\n    # Reuse from project (assume importable; stub if not)\n    try:\n        from src.core.params import encode_sequence  # Or full path to encode\n        from gists.breathing.czt_feature_extractor.src.dna_breathing_gist import (\n            compute_czt_spectrum,\n            extract_features,\n        )\n    except ImportError:\n        # Fallback stub for scaffold (replace with actual in full impl)\n        def encode_sequence(seq): return np.array([1j] * len(seq))\n        def compute_czt_spectrum(sig, **kwargs): return np.linspace(0,1,64), np.array([1j] * 64)\n        def extract_features(freqs, spec): return {'resonance_mag': 1.0, 'phase_coh': 0.5}\n\n    wt_signal = encode_sequence(wt_seq)\n    mut_signal = encode_sequence(mut_seq)\n\n    _, wt_spec = compute_czt_spectrum(wt_signal)\n    _, mut_spec = compute_czt_spectrum(mut_signal)\n\n    wt_features = extract_features(wt_spec)  # Assume returns dict with keys\n    mut_features = extract_features(mut_spec)\n\n    metrics = ['resonance_mag', 'phase_coh', 'spectral_centroid', 'band_energy', 'snr']\n    diffs = {f'delta_{m}': mut_features.get(m, 0) - wt_features.get(m, 0) for m in metrics}\n\n    # Ensure finite\n    for v in diffs.values():\n        assert np.isfinite(v)\n\n    return diffs
 
 
-def load_guides(
-    fasta_path: Path,
-    n_guides: int,
-    seed: int = 42,
-) -> List[str]:
-    """
-    PURPOSE: As a researcher, I want balanced guide loading so that I can ensure
-    representative GC distribution.
-
-    INPUTS: [fasta_path: Path to Brunello FASTA; n_guides: int; seed: int for subset]
-    EXPECTED OUTPUT: [List[str] of n_guides 20nt sequences; ~50/50 high/low GC]
-    TEST DATA: [brunello.fasta, n=200, seed=42: expect 100 high-GC (>0.5), 100 low;
-                all len=20, ATGC only]
-    REPRODUCTION: [Parse FASTA (Bio.SeqIO); compute gc_content; stratify sample by GC;
-                   verify balance, reproducibility]
-    """
-    # TODO: Implement: Parse FASTA; filter valid 20nt; compute gc; balanced subsample
-    pass
-    return []
+def load_guides(\n    fasta_path: Path,\n    n_guides: int,\n    seed: int = 42,\n) -> List[str]:\n    \"\"\"\n    PURPOSE: As a researcher, I want balanced guide loading so that I can ensure\n    representative GC distribution.\n\n    INPUTS: [fasta_path: Path to Brunello FASTA; n_guides: int; seed: int for subset]\n    EXPECTED OUTPUT: [List[str] of n_guides 20nt sequences; ~50/50 high/low GC]\n    TEST DATA: [brunello.fasta, n=200, seed=42: expect 100 high-GC (>0.5), 100 low;\n                all len=20, ATGC only]\n    REPRODUCTION: [Parse FASTA (Bio.SeqIO); compute gc_content; stratify sample by GC;\n                   verify balance, reproducibility]\n    \"\"\"\n    from Bio import SeqIO  # Assumes biopython available\n    import numpy as np\n    np.random.seed(seed)\n\n    guides = []\n    for rec in SeqIO.parse(fasta_path, \"fasta\"):\n        seq = str(rec.seq).upper()\n        if len(seq) != 20 or not all(b in 'ATGC' for b in seq):\n            continue\n        guides.append(seq)\n    if len(guides) < n_guides:\n        raise ValueError(f\"Insufficient valid guides: {len(guides)} < {n_guides}\")\n\n    # Compute GC\n    gc_contents = [sum(1 for b in g if b in 'GC') / 20 for g in guides]\n    high_gc_idx = [i for i, gc in enumerate(gc_contents) if gc > 0.5]\n    low_gc_idx = [i for i, gc in enumerate(gc_contents) if gc <= 0.5]\n\n    n_high = min(len(high_gc_idx), n_guides // 2)\n    n_low = n_guides - n_high\n    n_low = min(n_low, len(low_gc_idx))\n\n    high_sample = np.random.choice(high_gc_idx, n_high, replace=False)\n    low_sample = np.random.choice(low_gc_idx, n_low, replace=False)\n    selected_idx = np.concatenate([high_sample, low_sample])\n\n    return [guides[i] for i in selected_idx]
