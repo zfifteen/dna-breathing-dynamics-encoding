@@ -302,14 +302,36 @@ def apply_phase_shift(signal: np.ndarray, seq_len: int, k: float = 0.3) -> np.nd
         - exp(1j * phase) performs complex rotation in unit circle
         - Element-wise multiplication broadcasts phase rotation
     """
-    # TODO: Validate signal is not empty
-    # TODO: Validate seq_len == len(signal)
-    # TODO: Compute kappa_weight = kappa(seq_len)
-    # TODO: List comprehension: phases = [theta_prime(i+1, k) * kappa_weight for i in range(len(signal))]
-    # TODO: Convert phases to numpy array
-    # TODO: Compute rotations = np.exp(1j * phases)
-    # TODO: Return signal * rotations (element-wise)
-    pass
+    # Validate signal is not empty
+    if len(signal) == 0:
+        raise ValueError("Signal cannot be empty")
+    
+    # Validate seq_len == len(signal)
+    if seq_len != len(signal):
+        raise ValueError(
+            f"Sequence length mismatch: seq_len={seq_len}, "
+            f"signal length={len(signal)}"
+        )
+    
+    # Compute kappa_weight = kappa(seq_len)
+    # This single value weights all phases uniformly
+    kappa_weight = kappa(seq_len)
+    
+    # List comprehension: phases = [theta_prime(i+1, k) * kappa_weight for i in range(len(signal))]
+    # Use i+1 for 1-based indexing in theta_prime
+    # Multiply each θ′ by κ to get weighted phase
+    phases = [theta_prime(i + 1, k) * kappa_weight for i in range(len(signal))]
+    
+    # Convert phases to numpy array for vectorized operations
+    phases = np.array(phases)
+    
+    # Compute rotations = np.exp(1j * phases)
+    # This creates complex unit vectors: e^(iφ) for each phase φ
+    rotations = np.exp(1j * phases)
+    
+    # Return signal * rotations (element-wise)
+    # Multiplying by e^(iφ) rotates each complex number by angle φ
+    return signal * rotations
 
 
 # =============================================================================
