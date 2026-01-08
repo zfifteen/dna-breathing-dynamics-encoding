@@ -465,19 +465,58 @@ def disruption_score(
         - FFT length matches sequence length (no zero-padding)
         - Uses same κ(n) for both (length unchanged by point mutations)
     """
-    # TODO: Validate original_seq and mutated_seq are not empty
-    # TODO: Validate len(original_seq) == len(mutated_seq)
-    # TODO: seq_len = len(original_seq)
-    # TODO: sig_orig = dna_to_complex(original_seq)
-    # TODO: sig_mut = dna_to_complex(mutated_seq)
-    # TODO: sig_orig_shifted = apply_phase_shift(sig_orig, seq_len, k)
-    # TODO: sig_mut_shifted = apply_phase_shift(sig_mut, seq_len, k)
-    # TODO: fft_orig = np.fft.fft(sig_orig_shifted)
-    # TODO: fft_mut = np.fft.fft(sig_mut_shifted)
-    # TODO: H_orig = compute_spectral_entropy(fft_orig)
-    # TODO: H_mut = compute_spectral_entropy(fft_mut)
-    # TODO: Return H_mut - H_orig
-    pass
+    # Validate original_seq and mutated_seq are not empty
+    if not original_seq:
+        raise ValueError("Original sequence cannot be empty")
+    if not mutated_seq:
+        raise ValueError("Mutated sequence cannot be empty")
+    
+    # Validate len(original_seq) == len(mutated_seq)
+    if len(original_seq) != len(mutated_seq):
+        raise ValueError(
+            f"Sequence length mismatch: original={len(original_seq)}, "
+            f"mutated={len(mutated_seq)}"
+        )
+    
+    # seq_len = len(original_seq)
+    seq_len = len(original_seq)
+    
+    # sig_orig = dna_to_complex(original_seq)
+    # Encode original sequence as complex waveform
+    sig_orig = dna_to_complex(original_seq)
+    
+    # sig_mut = dna_to_complex(mutated_seq)
+    # Encode mutated sequence as complex waveform
+    sig_mut = dna_to_complex(mutated_seq)
+    
+    # sig_orig_shifted = apply_phase_shift(sig_orig, seq_len, k)
+    # Apply κ(seq_len)-weighted θ′ phase rotation to original
+    sig_orig_shifted = apply_phase_shift(sig_orig, seq_len, k)
+    
+    # sig_mut_shifted = apply_phase_shift(sig_mut, seq_len, k)
+    # Apply same κ(seq_len)-weighted θ′ phase rotation to mutated
+    # Note: κ(seq_len) is identical for both (length unchanged)
+    sig_mut_shifted = apply_phase_shift(sig_mut, seq_len, k)
+    
+    # fft_orig = np.fft.fft(sig_orig_shifted)
+    # Transform original to frequency domain
+    fft_orig = np.fft.fft(sig_orig_shifted)
+    
+    # fft_mut = np.fft.fft(sig_mut_shifted)
+    # Transform mutated to frequency domain
+    fft_mut = np.fft.fft(sig_mut_shifted)
+    
+    # H_orig = compute_spectral_entropy(fft_orig)
+    # Quantify frequency spread for original sequence
+    H_orig = compute_spectral_entropy(fft_orig)
+    
+    # H_mut = compute_spectral_entropy(fft_mut)
+    # Quantify frequency spread for mutated sequence
+    H_mut = compute_spectral_entropy(fft_mut)
+    
+    # Return H_mut - H_orig
+    # Δentropy: positive if mutation increases disorder
+    return H_mut - H_orig
 
 
 # =============================================================================
