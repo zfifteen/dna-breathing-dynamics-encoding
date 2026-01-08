@@ -221,13 +221,32 @@ def dna_to_complex(seq: str) -> np.ndarray:
         - Uppercase conversion ensures case-insensitive matching
         - Complex128 dtype provides sufficient precision for downstream FFT
     """
-    # TODO: Validate seq is not empty
-    # TODO: Convert seq to uppercase
-    # TODO: Define mapping dict: {'A': 1, 'T': -1, 'C': 1j, 'G': -1j}
-    # TODO: List comprehension with mapping.get(base, 0) for each base
-    # TODO: Convert to np.array with dtype=complex128
-    # TODO: Return complex array
-    pass
+    # Validate seq is not empty
+    if not seq:
+        raise ValueError("DNA sequence cannot be empty")
+    
+    # Convert seq to uppercase for case-insensitive matching
+    seq = seq.upper()
+    
+    # Define mapping dict: {'A': 1, 'T': -1, 'C': 1j, 'G': -1j}
+    # This encoding captures biophysical breathing properties
+    mapping = {
+        'A': 1+0j,      # Adenine: fast breathing (AT pair, real axis)
+        'T': -1+0j,     # Thymine: fast breathing (AT pair, real axis)
+        'C': 0+1j,      # Cytosine: slow breathing (GC pair, imaginary axis)
+        'G': 0-1j,      # Guanine: slow breathing (GC pair, imaginary axis)
+    }
+    
+    # List comprehension with mapping.get(base, 0) for each base
+    # Invalid bases (N, X, etc.) map to 0+0j
+    complex_values = [mapping.get(base, 0+0j) for base in seq]
+    
+    # Convert to np.array with dtype=complex128
+    # Complex128 provides 64-bit precision for real and imaginary parts
+    result = np.array(complex_values, dtype=np.complex128)
+    
+    # Return complex array
+    return result
 
 
 # =============================================================================
