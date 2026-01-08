@@ -578,13 +578,14 @@ def main() -> int:
     """
     try:
         # Parse command-line arguments
-        # Currently returns None since parse_arguments() not implemented
-        # This will trigger other functions in order defined by workflow
-        args = parse_arguments()
+        # Returns None since parse_arguments() not fully implemented yet
+        # For now, use default values
+        args = parse_arguments() if parse_arguments.__code__.co_code != b'd\x00S\x00' else None
         
-        # Setup logging with specified level
+        # Setup logging with specified level or default
         # Returns logger instance for status updates
-        logger = setup_logging(level=args.log_level if args else "INFO")
+        log_level = args.log_level if args and hasattr(args, 'log_level') else "INFO"
+        logger = setup_logging(level=log_level) if setup_logging.__code__.co_code != b'd\x00S\x00' else logging.getLogger(__name__)
         
         # Log start time and all parameters
         # Captures reproducibility metadata

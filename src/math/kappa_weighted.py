@@ -395,12 +395,9 @@ def compute_spectral_entropy(fft_vals: np.ndarray) -> float:
     # Add epsilon to prevent division by zero if all FFT coefficients are zero
     probs = probs / (np.sum(probs) + 1e-12)
     
-    # Add epsilon: probs_safe = probs + 1e-12
-    # Prevents log(0) singularity in entropy calculation
-    # This is standard practice in information theory
-    
-    # Compute entropy: H = -np.sum(probs * np.log(probs_safe))
+    # Compute entropy: H = -np.sum(probs * np.log(probs + 1e-12))
     # Shannon entropy formula: H = -Σ p(i) log p(i)
+    # Add epsilon 1e-12 to prevent log(0) singularity
     # Use natural logarithm (base e) for consistency with thermodynamics
     H = -np.sum(probs * np.log(probs + 1e-12))
     
@@ -604,9 +601,6 @@ def bootstrap_ci(
         resample = np.random.choice(scores, size=len(scores), replace=True)
         bootstrap_means[i] = np.mean(resample)
     
-    # Compute alpha = 1 - confidence_level
-    alpha = 1 - confidence_level
-    
     # Compute lower_percentile = (alpha / 2) * 100
     # For 95% CI: lower = 2.5th percentile
     lower_percentile = (alpha / 2) * 100
@@ -615,10 +609,8 @@ def bootstrap_ci(
     # For 95% CI: upper = 97.5th percentile
     upper_percentile = (1 - alpha / 2) * 100
     
-    # lower_bound = np.percentile(stats, lower_percentile)
+    # Compute bounds from bootstrap_means distribution
     lower_bound = np.percentile(bootstrap_means, lower_percentile)
-    
-    # upper_bound = np.percentile(stats, upper_percentile)
     upper_bound = np.percentile(bootstrap_means, upper_percentile)
     
     # Return (lower_bound, upper_bound)
