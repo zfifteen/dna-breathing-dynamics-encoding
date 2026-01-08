@@ -579,19 +579,50 @@ def bootstrap_ci(
         - Seed must be set explicitly per reproducibility standards
         - 4000 resamples ensures CI width stable to ±0.001
     """
-    # TODO: Validate scores is not empty
-    # TODO: Validate n_resamples >= 1000
-    # TODO: Set random seed: np.random.seed(random_seed) if provided
-    # TODO: Initialize resamples array: shape (n_resamples, len(scores))
-    # TODO: For loop: resamples[i] = np.random.choice(scores, len(scores), replace=True)
-    # TODO: Compute stats = np.mean(resamples, axis=1)
-    # TODO: Compute alpha = 1 - confidence_level
-    # TODO: Compute lower_percentile = (alpha / 2) * 100
-    # TODO: Compute upper_percentile = (1 - alpha / 2) * 100
-    # TODO: lower_bound = np.percentile(stats, lower_percentile)
-    # TODO: upper_bound = np.percentile(stats, upper_percentile)
-    # TODO: Return (lower_bound, upper_bound)
-    pass
+    # Validate scores is not empty
+    if len(scores) == 0:
+        raise ValueError("Scores array cannot be empty")
+    
+    # Validate n_resamples >= 1000
+    if n_resamples < 1000:
+        raise ValueError(
+            f"Number of resamples must be >= 1000 for statistical power, "
+            f"got {n_resamples}"
+        )
+    
+    # Set random seed: np.random.seed(random_seed) if provided
+    if random_seed is not None:
+        np.random.seed(random_seed)
+    
+    # Initialize resamples array: shape (n_resamples, len(scores))
+    # We'll store the mean of each resample, not the full resampled data
+    bootstrap_means = np.zeros(n_resamples)
+    
+    # For loop: resamples[i] = np.random.choice(scores, len(scores), replace=True)
+    # Compute mean of each resample
+    for i in range(n_resamples):
+        resample = np.random.choice(scores, size=len(scores), replace=True)
+        bootstrap_means[i] = np.mean(resample)
+    
+    # Compute alpha = 1 - confidence_level
+    alpha = 1 - confidence_level
+    
+    # Compute lower_percentile = (alpha / 2) * 100
+    # For 95% CI: lower = 2.5th percentile
+    lower_percentile = (alpha / 2) * 100
+    
+    # Compute upper_percentile = (1 - alpha / 2) * 100
+    # For 95% CI: upper = 97.5th percentile
+    upper_percentile = (1 - alpha / 2) * 100
+    
+    # lower_bound = np.percentile(stats, lower_percentile)
+    lower_bound = np.percentile(bootstrap_means, lower_percentile)
+    
+    # upper_bound = np.percentile(stats, upper_percentile)
+    upper_bound = np.percentile(bootstrap_means, upper_percentile)
+    
+    # Return (lower_bound, upper_bound)
+    return (float(lower_bound), float(upper_bound))
 
 
 # =============================================================================
