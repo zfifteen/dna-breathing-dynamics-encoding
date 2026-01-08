@@ -71,14 +71,28 @@ def kappa(n: int) -> float:
         - mpmath ensures 50-decimal-place precision for ln(n+1)
         - Returns float for compatibility with NumPy arrays
     """
-    # TODO: Validate n > 0
-    # TODO: Import sympy.ntheory.divisor_count
-    # TODO: Compute d_n = divisor_count(n)
-    # TODO: Set mpmath precision to 50 decimal places
-    # TODO: Compute ln_term = mp.log(n + 1)
-    # TODO: Compute e_squared = mp.exp(2)
-    # TODO: Return float(d_n * ln_term / e_squared)
-    pass
+    # Validate n > 0
+    if n <= 0:
+        raise ValueError(f"Sequence length n must be positive, got {n}")
+    
+    # Import sympy.ntheory.divisor_count for d(n)
+    from sympy.ntheory import divisor_count
+    
+    # Compute d_n = divisor_count(n)
+    d_n = divisor_count(n)
+    
+    # Set mpmath precision to 50 decimal places
+    mp.dps = 50
+    
+    # Compute ln_term = mp.log(n + 1)
+    ln_term = mp.log(n + 1)
+    
+    # Compute e_squared = mp.exp(2)
+    e_squared = mp.exp(2)
+    
+    # Return float(d_n * ln_term / e_squared)
+    # This implements κ(n) = d(n)·ln(n+1)/e²
+    return float(d_n * ln_term / e_squared)
 
 
 # =============================================================================
