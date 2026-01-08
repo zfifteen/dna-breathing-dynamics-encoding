@@ -576,22 +576,177 @@ def main() -> int:
         - Total runtime ~5-10 min for 1000 guides, 4000 bootstrap samples
         - Memory peak ~500MB
     """
-    # TODO: Parse command-line arguments
-    # TODO: Setup logging with specified level
-    # TODO: Log start time and all parameters
-    # TODO: Set global random seeds (numpy, random)
-    # TODO: Load Kim 2025 dataset
-    # TODO: Stratify by length if --stratify flag set
-    # TODO: Compute baseline metrics
-    # TODO: Compute κ-weighted metrics
-    # TODO: Compute delta metrics (Δr, ΔAUC)
-    # TODO: Generate comparison plots
-    # TODO: Generate κ distribution plot
-    # TODO: Generate validation report
-    # TODO: Save results CSV
-    # TODO: Log completion time and exit status
-    # TODO: Return 0 for success
-    pass
+    try:
+        # Parse command-line arguments
+        # Currently returns None since parse_arguments() not implemented
+        # This will trigger other functions in order defined by workflow
+        args = parse_arguments()
+        
+        # Setup logging with specified level
+        # Returns logger instance for status updates
+        logger = setup_logging(level=args.log_level if args else "INFO")
+        
+        # Log start time and all parameters
+        # Captures reproducibility metadata
+        start_time = time.time()
+        logger.info("="*60)
+        logger.info("κ-Weighted θ′ Validation Pipeline Starting")
+        logger.info("="*60)
+        if args:
+            logger.info(f"Input: {args.input}")
+            logger.info(f"Output: {args.output}")
+            logger.info(f"Bootstrap samples: {args.n_boot}")
+            logger.info(f"Random seed: {args.seed}")
+            logger.info(f"Geodesic exponent k: {args.k_geo}")
+            logger.info(f"Plot directory: {args.plot_dir}")
+        
+        # Set global random seeds (numpy, random)
+        # Ensures reproducibility across entire pipeline
+        if args and hasattr(args, 'seed'):
+            np.random.seed(args.seed)
+            import random
+            random.seed(args.seed)
+            logger.info(f"Random seeds set to {args.seed}")
+        
+        # Load Kim 2025 dataset
+        # Validates data quality and filters by length
+        logger.info("Loading dataset...")
+        df = load_kim2025_dataset(
+            csv_path=args.input if args else Path("data/kim2025_subset.csv")
+        )
+        logger.info(f"Loaded {len(df)} guides")
+        
+        # Stratify by length if --stratify flag set
+        # Ensures balanced representation across 18-22nt range
+        if args and hasattr(args, 'stratify') and args.stratify:
+            logger.info("Stratifying by sequence length...")
+            df = stratify_by_length(df, n_per_length=200)
+            logger.info(f"Stratified to {len(df)} guides")
+        
+        # Compute baseline metrics
+        # Reference performance without κ weighting
+        logger.info("Computing baseline (non-κ) metrics...")
+        baseline = compute_baseline_metrics(
+            df=df,
+            k_geo=args.k_geo if args else 0.3,
+            random_seed=args.seed if args else 42
+        )
+        logger.info(f"Baseline Pearson r: {baseline.get('pearson_r', 'N/A'):.4f}")
+        
+        # Compute κ-weighted metrics
+        # Test condition with κ(n) weighting
+        logger.info("Computing κ-weighted metrics...")
+        kappa_weighted = compute_kappa_weighted_metrics(
+            df=df,
+            k_geo=args.k_geo if args else 0.3,
+            random_seed=args.seed if args else 42
+        )
+        logger.info(f"κ-weighted Pearson r: {kappa_weighted.get('pearson_r', 'N/A'):.4f}")
+        
+        # Calculate Δr and ΔAUC
+        # Primary hypothesis test
+        logger.info("Computing differential metrics...")
+        delta_metrics = compute_delta_metrics(
+            baseline=baseline,
+            kappa_weighted=kappa_weighted
+        )
+        logger.info(f"Δr: {delta_metrics.get('delta_r', 'N/A'):.4f}")
+        logger.info(f"ΔAUC: {delta_metrics.get('delta_auc', 'N/A'):.4f}")
+        
+        # Generate comparison plots
+        # Visual comparison for PR documentation
+        if args and args.plot_dir:
+            logger.info("Generating comparison plots...")
+            plot_dir = Path(args.plot_dir)
+            plot_dir.mkdir(parents=True, exist_ok=True)
+            
+            plot_delta_r_comparison(
+                baseline=baseline,
+                kappa_weighted=kappa_weighted,
+                delta_metrics=delta_metrics,
+                output_path=plot_dir / "delta_r.pdf"
+            )
+            logger.info(f"Saved: {plot_dir / 'delta_r.pdf'}")
+            
+            # Generate κ distribution plot
+            # Diagnostic for divisor artifact detection
+            if 'kappa_values' in kappa_weighted:
+                plot_kappa_distribution(
+                    kappa_values=kappa_weighted['kappa_values'],
+                    lengths=df['length'].values,
+                    output_path=plot_dir / "kappa_distribution.pdf"
+                )
+                logger.info(f"Saved: {plot_dir / 'kappa_distribution.pdf'}")
+        
+        # Generate validation report
+        # Comprehensive results and falsification assessment
+        logger.info("Generating validation report...")
+        results = {
+            'baseline': baseline,
+            'kappa_weighted': kappa_weighted,
+            'delta_metrics': delta_metrics,
+            'parameters': {
+                'n_boot': args.n_boot if args else 4000,
+                'seed': args.seed if args else 42,
+                'k_geo': args.k_geo if args else 0.3,
+                'n_guides': len(df),
+            }
+        }
+        report_path = args.output.replace('.csv', '_report.txt') if args else "results/kappa_weighted_report.txt"
+        generate_validation_report(
+            results=results,
+            output_path=report_path
+        )
+        logger.info(f"Saved: {report_path}")
+        
+        # Save results CSV
+        # Tabular data for downstream analysis
+        if args:
+            logger.info(f"Saving results to {args.output}...")
+            # CSV will contain: guide_sequence, baseline_delta_entropy, kappa_delta_entropy, efficiency
+            results_df = pd.DataFrame({
+                'guide_sequence': df['guide_sequence'],
+                'length': df['length'],
+                'efficiency': df['efficiency'],
+                'baseline_delta_entropy': baseline.get('delta_entropy', []),
+                'kappa_delta_entropy': kappa_weighted.get('delta_entropy', []),
+            })
+            results_df.to_csv(args.output, index=False)
+            logger.info(f"Saved: {args.output}")
+        
+        # Log completion time and exit status
+        # Final summary
+        elapsed = time.time() - start_time
+        logger.info("="*60)
+        logger.info(f"Validation completed in {elapsed:.1f} seconds")
+        logger.info("="*60)
+        
+        # Determine success criteria
+        # Hypothesis survival check
+        if delta_metrics.get('delta_r', 0) > 0.012:
+            logger.info("✓ STRETCH GOAL MET: Δr ≥ 0.012")
+            logger.info("Hypothesis strongly supported!")
+        elif delta_metrics.get('delta_r', 0) > 0:
+            logger.info("✓ MINIMAL WIN: Δr > 0")
+            logger.info("Hypothesis supported (baseline improvement)")
+        else:
+            logger.info("✗ FALSIFIED: Δr ≤ 0")
+            logger.info("κ-weighting provides no benefit")
+        
+        # Return 0 for success (data processing completed)
+        # Note: Hypothesis pass/fail is in report, not exit code
+        return 0
+        
+    except Exception as e:
+        # Catch all errors and log with traceback
+        import traceback
+        if 'logger' in locals():
+            logger.error(f"Fatal error: {e}")
+            logger.error(traceback.format_exc())
+        else:
+            print(f"Fatal error: {e}", file=sys.stderr)
+            traceback.print_exc()
+        return 1
 
 
 if __name__ == "__main__":
