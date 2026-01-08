@@ -146,14 +146,31 @@ def theta_prime(n: int, k: float = 0.3) -> float:
         - mp.fmod ensures precise modular arithmetic at 50 decimal places
         - Exponent k=0.3 is empirically validated default from Z Framework
     """
-    # TODO: Validate n > 0
-    # TODO: Validate 0 <= k <= 1
-    # TODO: Set mpmath precision to 50 decimal places
-    # TODO: Compute phi = (1 + mp.sqrt(5)) / 2
-    # TODO: Compute mod_term = mp.fmod(n, phi)
-    # TODO: Compute phase = phi * (mod_term / phi) ** k
-    # TODO: Return float(phase)
-    pass
+    # Validate n > 0
+    if n <= 0:
+        raise ValueError(f"Position index n must be positive, got {n}")
+    
+    # Validate 0 <= k <= 1
+    if not (0 <= k <= 1):
+        raise ValueError(f"Geodesic exponent k must be in [0, 1], got {k}")
+    
+    # Set mpmath precision to 50 decimal places
+    mp.dps = 50
+    
+    # Compute phi = (1 + mp.sqrt(5)) / 2
+    # This is the golden ratio φ ≈ 1.618033988749...
+    phi = (1 + mp.sqrt(5)) / 2
+    
+    # Compute mod_term = mp.fmod(n, phi)
+    # This gives the fractional residue when dividing n by φ
+    mod_term = mp.fmod(n, phi)
+    
+    # Compute phase = phi * (mod_term / phi) ** k
+    # This implements θ′(n,k) = φ · ((n mod φ) / φ)^k
+    phase = phi * mp.power(mod_term / phi, k)
+    
+    # Return float(phase)
+    return float(phase)
 
 
 # =============================================================================
