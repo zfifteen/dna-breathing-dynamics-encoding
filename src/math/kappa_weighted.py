@@ -383,13 +383,30 @@ def compute_spectral_entropy(fft_vals: np.ndarray) -> float:
         - Uses np.sum for numerical stability over manual loops
         - Absolute value squared handles both positive and negative frequencies
     """
-    # TODO: Validate fft_vals is not empty
-    # TODO: Compute probs = np.abs(fft_vals) ** 2
-    # TODO: Normalize: probs /= (np.sum(probs) + 1e-12)
-    # TODO: Add epsilon: probs_safe = probs + 1e-12
-    # TODO: Compute entropy: H = -np.sum(probs * np.log(probs_safe))
-    # TODO: Return float(H)
-    pass
+    # Validate fft_vals is not empty
+    if len(fft_vals) == 0:
+        raise ValueError("FFT values cannot be empty")
+    
+    # Compute probs = np.abs(fft_vals) ** 2
+    # This gives power spectrum: energy at each frequency
+    probs = np.abs(fft_vals) ** 2
+    
+    # Normalize: probs /= (np.sum(probs) + 1e-12)
+    # Add epsilon to prevent division by zero if all FFT coefficients are zero
+    probs = probs / (np.sum(probs) + 1e-12)
+    
+    # Add epsilon: probs_safe = probs + 1e-12
+    # Prevents log(0) singularity in entropy calculation
+    # This is standard practice in information theory
+    
+    # Compute entropy: H = -np.sum(probs * np.log(probs_safe))
+    # Shannon entropy formula: H = -Σ p(i) log p(i)
+    # Use natural logarithm (base e) for consistency with thermodynamics
+    H = -np.sum(probs * np.log(probs + 1e-12))
+    
+    # Return float(H)
+    # Ensure return type is Python float for consistency
+    return float(H)
 
 
 # =============================================================================
